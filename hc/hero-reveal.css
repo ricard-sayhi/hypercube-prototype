@@ -1,0 +1,94 @@
+/* Hypercube hero reveal: Sport, Mobiliteit and Over Hypercube (NL + EN), and the 3D home hero.
+   Typography and spacing follow the site's own theme values (measured on hypercube.nl at 1440 px):
+   page title IBM Plex Mono 43.2px / 4px tracking / #333; tabs IBM Plex Mono 18px uppercase, 8px 30px, active tab
+   in the page colour with white text. Everything here is prefixed hc- so it never collides with the theme CSS. */
+
+:root { --hc-red: #FF0000; --hc-blue: #0000FF; --hc-yellow: #FFCC00; --hc-black: #1D1D1B; --hc-ink: #333; }
+
+/* until the script has taken over, keep hidden what the sequence reveals (no flash of the finished page) */
+.js-hc .hc-hero, .js-hc .hc-mi, .js-hc .hc-reveal, .js-hc .hc-gtitle { visibility: hidden; }
+
+/* wrapper aligned to the top-left of the document and stretched to the full window width by the script */
+.hc-shift { position: relative; z-index: 1; }
+.hc-page { position: relative; background: #fff; }
+.hc-stage { position: relative; z-index: 1; height: 100vh; height: 100svh; overflow: hidden; background: #fff; }
+.hc-layout { position: absolute; inset: 0; padding-top: calc(var(--hc-header, 153px) + 26px); display: flex; flex-direction: column; align-items: center; gap: 22px; box-sizing: border-box; }
+.hc-title-row, .hc-menu { width: var(--hc-cw, min(1245px, calc(100% - 32px))); }
+
+/* page title: the theme's h2 values */
+.hc-title-row { display: flex; align-items: center; gap: clamp(16px, 2vw, 28px); }
+.hc-sq { width: clamp(44px, 6.9vw, 100px); height: clamp(44px, 6.9vw, 100px); border: clamp(6px, .7vw, 10px) solid var(--c); box-sizing: border-box; flex: none; visibility: hidden; }
+h2.hc-title { margin: 0; padding: 0; font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; font-weight: 400; font-style: normal;
+  font-size: clamp(18px, 3vw, 43.2px); letter-spacing: .0926em; line-height: 1.15; color: var(--hc-ink); text-transform: none; white-space: nowrap; opacity: 0; }
+h2.hc-title span { display: inline-block; }
+
+.hc-hero { width: min(var(--hc-cw, 1245px), calc((100svh - var(--hc-header, 153px) - 230px) * 2.56)); }
+.hc-hero svg { display: block; width: 100%; height: auto; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+
+/* menu under the image: the theme's tabs + the square marker and its feedback */
+.hc-menu { display: flex; flex-wrap: wrap; gap: 0; margin-top: -6px; }
+.hc-mi { --lc: var(--c); display: inline-flex; align-items: center; gap: 12px; padding: 8px 30px; box-sizing: border-box;
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; font-weight: 400; font-size: 18px; line-height: 28px; letter-spacing: normal;
+  text-transform: uppercase; text-decoration: none; color: #000; background: transparent;
+  outline: 1.5px solid transparent; outline-offset: -1.5px; transition: outline-color .18s, background-color .18s, color .18s; }
+.hc-mi:hover, .hc-mi:focus { color: #000; text-decoration: none; }
+.hc-m { width: 12px; height: 12px; border: 3px solid var(--lc); box-sizing: border-box; flex: none;
+  transition: transform .18s cubic-bezier(.2, .8, .2, 1), border-width .18s cubic-bezier(.2, .8, .2, 1), border-color .18s; }
+.hc-mi.on { outline-color: var(--lc); }
+.hc-mi.on .hc-m { transform: scale(1.14); border-width: 4.5px; }
+.hc-mi.press .hc-m { transform: scale(.9); border-width: 5.5px; transition-duration: .08s; }
+.hc-mi.active, .hc-mi.active:hover, .hc-mi.active:focus { background: var(--c); color: #fff; }
+.hc-mi.active .hc-m { border-color: #fff; }
+.hc-mi:focus-visible { outline-color: var(--hc-blue); }
+
+/* moving copies of the square and the title */
+.hc-gsq { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; overflow: visible; color: var(--c); }
+.hc-gtitle { position: absolute; inset: 0; z-index: 6; pointer-events: none; font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; font-weight: 400;
+  font-size: clamp(18px, 3vw, 43.2px); letter-spacing: .0926em; line-height: 1.15; color: var(--hc-ink); white-space: nowrap; }
+/* white backing: when the square's outline passes the words it goes behind them, never through them */
+.hc-gtitle span { position: absolute; background: #fff; box-shadow: 0 0 0 .3em #fff; }
+.hc-cue { position: absolute; z-index: 7; left: 50%; bottom: max(22px, env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; font-size: 12px; letter-spacing: .22em; text-transform: uppercase; color: #6A6A67; display: flex; gap: 10px; align-items: center; }
+.hc-cue::after { content: ''; width: 1.5px; height: 26px; background: currentColor; animation: hc-cue 1.6s ease-in-out infinite; transform-origin: top; }
+@keyframes hc-cue { 0%, 100% { transform: scaleY(.3); } 50% { transform: scaleY(1); } }
+
+/* the page's own tab content follows directly under the menu (pulled up by the script) */
+.hc-copy { position: relative; z-index: 2; overflow-x: clip; background: #fff; }
+.hc-copy-in { width: var(--hc-cw, min(1245px, calc(100% - 32px))); margin: 0 auto; }
+.hc-nav-hidden { display: none !important; }
+.hc-grp { position: relative; }
+
+/* image markers: shared feedback (hover/focus grows + thicker stroke, press squeezes) */
+.hc-svgt { font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; font-size: 15px; letter-spacing: 1.5px; fill: var(--hc-black); }
+.hc-pl, .hc-stn { outline: none; cursor: pointer; }
+.hc-pl .hc-n, .hc-stn .hc-st, .hc-stn .hc-tr { transform-box: fill-box; transform-origin: center; transition: transform .18s cubic-bezier(.2, .8, .2, 1), stroke-width .18s cubic-bezier(.2, .8, .2, 1); }
+.hc-pl .hc-cb, .hc-stn .hc-cb { transition: stroke-width .18s; stroke-width: 0; }
+.hc-pl .hc-cb { stroke: var(--c); }
+.hc-stn .hc-cb { stroke: var(--lc); }
+.hc-pl.on .hc-n { transform: scale(1.14); stroke-width: 10px; }
+.hc-pl.press .hc-n { transform: scale(.9); stroke-width: 12px; transition-duration: .08s; }
+.hc-stn.on .hc-st { transform: scale(1.14); }
+.hc-stn.on .hc-tr { transform: scale(.9); }
+.hc-stn.press .hc-st { transform: scale(.9); transition-duration: .08s; }
+.hc-stn.press .hc-tr { transform: scale(.6); transition-duration: .08s; }
+.hc-pl.on .hc-cb, .hc-stn.on .hc-cb { stroke-width: 2px; }
+.hc-pl:focus-visible .hc-cb, .hc-stn:focus-visible .hc-cb { stroke: var(--hc-blue); stroke-width: 3px; }
+
+/* 3D home hero. The theme pushes the following home sections down by 35-40vh (tuned for the old squares);
+   pulling them up by 20vh keeps the original breathing space under the hero. */
+.hc-shift-home { margin-bottom: -20vh; }
+.hc-home3d { position: relative; height: 100vh; height: 100svh; background: #fff; }
+.hc-home3d iframe { display: block; width: 100%; height: 100%; border: 0; }
+
+@media (max-width: 999px) {
+  .hc-mi { font-size: 14px; line-height: 22px; padding: 6px 16px; gap: 8px; }
+  .hc-m { width: 10px; height: 10px; border-width: 2.5px; }
+}
+@media (max-width: 600px) {
+  .hc-layout { gap: 16px; padding-top: calc(var(--hc-header, 80px) + 18px); }
+  .hc-mi { font-size: 12px; line-height: 18px; padding: 5px 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hc-pl .hc-n, .hc-stn .hc-st, .hc-stn .hc-tr, .hc-pl .hc-cb, .hc-stn .hc-cb, .hc-m, .hc-mi { transition: none; }
+  .hc-cue::after { animation: none; }
+}

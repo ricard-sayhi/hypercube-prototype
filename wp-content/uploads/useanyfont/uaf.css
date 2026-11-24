@@ -1,0 +1,37 @@
+				@font-face {
+					font-family: 'ibm-plex-mono-semibo';
+					src: url('../../../wp-content/uploads/useanyfont/8518IBM-Plex-Mono-SemiBo.woff2') format('woff2'),
+						url('../../../wp-content/uploads/useanyfont/8518IBM-Plex-Mono-SemiBo.woff') format('woff');
+					  font-display: auto;
+				}
+
+				.ibm-plex-mono-semibo{font-family: 'ibm-plex-mono-semibo' !important;}
+
+						@font-face {
+					font-family: 'ibm-plex-mono-light';
+					src: url('../../../wp-content/uploads/useanyfont/7232IBM-Plex-mono-light.woff2') format('woff2'),
+						url('../../../wp-content/uploads/useanyfont/7232IBM-Plex-mono-light.woff') format('woff');
+					  font-display: auto;
+				}
+
+				.ibm-plex-mono-light{font-family: 'ibm-plex-mono-light' !important;}
+
+						@font-face {
+					font-family: 'ibm-plex-mono-xlight';
+					src: url('../../../wp-content/uploads/useanyfont/6086ibm-plex-mono-xlight.woff2') format('woff2'),
+						url('../../../wp-content/uploads/useanyfont/6086ibm-plex-mono-xlight.woff') format('woff');
+					  font-display: auto;
+				}
+
+				.ibm-plex-mono-xlight{font-family: 'ibm-plex-mono-xlight' !important;}
+
+						@font-face {
+					font-family: 'ibm-plex-sans-light';
+					src: url('../../../wp-content/uploads/useanyfont/785IBM-Plex-Sans-Light.woff2') format('woff2'),
+						url('../../../wp-content/uploads/useanyfont/785IBM-Plex-Sans-Light.woff') format('woff');
+					  font-display: auto;
+				}
+
+				.ibm-plex-sans-light{font-family: 'ibm-plex-sans-light' !important;}
+
+		

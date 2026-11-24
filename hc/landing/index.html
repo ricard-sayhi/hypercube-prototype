@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hypercube — 3D landing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@200;400;600&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #FE0100; --blue: #0000FF; --yellow: #FFCC00; --black: #1D1D1B; --ink: #333;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #fff; color: var(--ink); font-family: 'IBM Plex Sans', system-ui, sans-serif; overflow: hidden; }
+
+  /* Site header (same proportions as hypercube.nl) */
+  header { position: fixed; inset: 0 0 auto 0; height: 110px; display: flex; align-items: center; justify-content: center; z-index: 10; pointer-events: none; }
+  header img { height: 56px; pointer-events: auto; }
+  header .meta { position: absolute; right: 40px; display: flex; gap: 22px; align-items: center; font-size: 14px; pointer-events: auto; }
+  header .meta b { font-weight: 600; font-size: 16px; margin-left: 18px; }
+
+  #stage { position: fixed; inset: 0; cursor: grab; }
+  #stage.dragging { cursor: grabbing; }
+  #stage.over-portal { cursor: pointer; }
+  canvas { display: block; touch-action: none; }
+
+  /* Page label that pops on hover */
+  .label {
+    position: fixed; left: 0; top: 0; z-index: 20;
+    transform: translate3d(var(--x, -999px), var(--y, -999px), 0) translate(-50%, -50%) scale(.94);
+    display: block; text-align: center; text-decoration: none; white-space: nowrap;
+    font-family: 'IBM Plex Mono', monospace; font-weight: 400; text-transform: uppercase;
+    letter-spacing: .16em; line-height: 1.2; font-size: clamp(26px, 3.4vw, 50px);
+    color: var(--c); padding: .45em .8em .5em;
+    background: rgba(255, 255, 255, .86);
+    -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+    opacity: 0; pointer-events: none; outline: none; will-change: transform, opacity;
+    transition: opacity .22s ease, scale .3s cubic-bezier(.2, .8, .2, 1);
+  }
+  .label.show { opacity: 1; pointer-events: auto; transform: translate3d(var(--x), var(--y), 0) translate(-50%, -50%) scale(1); }
+  .label small {
+    display: inline-flex; align-items: center; gap: .9em; margin-top: .9em;
+    font-family: 'IBM Plex Sans', sans-serif; font-weight: 600; font-size: 14px; letter-spacing: .02em; text-transform: none; color: var(--ink);
+  }
+  .label small::before { content: ''; width: 26px; height: 1px; background: currentColor; transition: width .3s; }
+  .label:hover small::before, .label:focus-visible small::before { width: 44px; }
+  .label:focus-visible { box-shadow: 0 0 0 2px var(--c); }
+
+  /* Bottom dock: hint line + one pill per page */
+  .dock {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 15;
+    display: flex; flex-direction: column; align-items: center; gap: 16px; width: max-content; max-width: calc(100% - 32px);
+  }
+  .hint {
+    margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 15px; letter-spacing: .2em; text-transform: uppercase; color: #7a7a7a;
+    transition: opacity .4s; pointer-events: none; text-align: center; white-space: nowrap;
+  }
+  .pills { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    --c: var(--ink);
+    display: inline-flex; align-items: center; gap: .6em; padding: .7em 1.35em; border-radius: 999px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 13px; letter-spacing: .16em; text-transform: uppercase; text-decoration: none;
+    color: var(--c); background: rgba(255, 255, 255, .9); border: 1.5px solid var(--c);
+    -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); outline: none; cursor: pointer;
+    transition: background-color .25s, color .25s, opacity .3s, transform .25s cubic-bezier(.2, .8, .2, 1);
+  }
+  .pill::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .pill:hover, .pill:focus-visible, .pill.on { background: var(--c); color: #fff; }
+  .pill:active { transform: scale(.96); }
+  .pills.has-on .pill:not(.on) { opacity: .35; }                      /* same dimming rule as the cube */
+  .pill.go::after { content: '→'; margin-left: .1em; }
+  .hint i { font-style: normal; }
+  .hint .s { color: var(--red); } .hint .m { color: var(--blue); } .hint .o { color: var(--black); }
+  .hint.hide { opacity: 0; }
+
+  @media (max-width: 700px) { header .meta { display: none; } header img { height: 40px; } .dock { bottom: 22px; gap: 12px; } .hint { font-size: 12px; letter-spacing: .14em; white-space: normal; line-height: 1.7; } .pills { gap: 6px; flex-wrap: nowrap; } .pill { font-size: 10.5px; padding: .7em .9em; letter-spacing: .06em; gap: .45em; white-space: nowrap; } .pill::before { width: 6px; height: 6px; } }
+  /* embedded in the home page: the site's own header sits above, so hide this page's mock header */
+  .embed header { display: none; }
+  /* embedded: vertical swipes scroll the page; horizontal drags still turn the cube */
+  .embed canvas { touch-action: pan-y; }
+</style>
+<script>
+  (function () {
+    var q = new URLSearchParams(location.search);
+    if (q.has('embed')) document.documentElement.classList.add('embed');
+    if (q.get('lang') === 'en') document.documentElement.lang = 'en';
+  })();
+</script>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
+</script>
+</head>
+<body>
+<header>
+  <img src="assets/logo.png" alt="Hypercube Business Innovation">
+  <div class="meta"><span>NL</span><span>EN</span><b>Menu</b></div>
+</header>
+
+<div id="stage" aria-hidden="true"></div>
+
+<!-- Labels double as the accessible navigation: focusable links, revealed on hover/focus -->
+<nav aria-label="Hoofdnavigatie">
+  <a class="label" tabindex="-1" data-portal="sport" href="../../sport/" target="_top" style="--c: var(--red)">Sport<br><small>Ontdek sport</small></a>
+  <a class="label" tabindex="-1" data-portal="mobiliteit" href="../../mobiliteit/" target="_top" style="--c: var(--blue)">Mobiliteit<br><small>Ontdek mobiliteit</small></a>
+  <a class="label" tabindex="-1" data-portal="over" href="../../over-hypercube/" target="_top" style="--c: var(--black)">Over<br>Hypercube<br><small>Wie we zijn</small></a>
+</nav>
+
+<div class="dock">
+  <p class="hint" id="hint">Beweeg over de kubus of kies een pagina</p>
+  <div class="pills" id="pills" role="list">
+    <a class="pill" role="listitem" data-portal="sport" href="../../sport/" target="_top" style="--c: var(--red)">Sport</a>
+    <a class="pill" role="listitem" data-portal="mobiliteit" href="../../mobiliteit/" target="_top" style="--c: var(--blue)">Mobiliteit</a>
+    <a class="pill" role="listitem" data-portal="over" href="../../over-hypercube/" target="_top" style="--c: var(--black)">Over Hypercube</a>
+  </div>
+</div>
+
+<script>
+  (function () {
+    if (document.documentElement.lang !== 'en') return;
+    var T = {
+      sport: { href: '../../en/sports/', label: 'Sports<br><small>Explore sports</small>', pill: 'Sports' },
+      mobiliteit: { href: '../../en/mobility/', label: 'Mobility<br><small>Explore mobility</small>', pill: 'Mobility' },
+      over: { href: '../../en/about-hypercube/', label: 'About<br>Hypercube<br><small>Who we are</small>', pill: 'About Hypercube' }
+    };
+    Object.keys(T).forEach(function (k) {
+      var l = document.querySelector('.label[data-portal="' + k + '"]'), p = document.querySelector('.pill[data-portal="' + k + '"]');
+      if (l) { l.href = T[k].href; l.innerHTML = T[k].label; }
+      if (p) { p.href = T[k].href; p.textContent = T[k].pill; }
+    });
+    var h = document.getElementById('hint'); if (h) h.textContent = 'Move over the cube or choose a page';
+    var nav = document.getElementById('pills'); if (nav) nav.setAttribute('aria-label', 'Pages');
+  })();
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+/* ==================================================================
+   GEOMETRY
+   The Hypercube logo is a projection of a 4D tesseract:
+   16 vertices (±1)^4, 32 edges, one colour per 4D axis.
+     x → red   y → blue   z → yellow   w → black (the 4th dimension)
+   BASIS maps 4D → 3D; head-on it reproduces the logo, in 3D it has depth.
+
+   STROKES & JOINTS
+   Every edge is a true 3D tube that starts and ends EXACTLY at its two
+   vertices (no extension, no trimming). Every vertex gets one joint ball
+   with the stroke's radius, centred on the vertex, so all four tube ends
+   meet inside the same volume: no caps poke out, nothing z-fights.
+   Which colour shows at a joint is a rule, not a depth accident:
+   each tesseract vertex touches exactly one edge of every colour, so the
+   joint takes the "leading" colour — red at rest (as in the logo, where
+   the red horizontals sit on top at the corners), and the hovered page's
+   colour while a page is open, so its strokes read as continuous lines.
+   ================================================================== */
+const C = 0.59, D = 0.82;
+const R = 0.066;                         // stroke radius (world units)
+const BASIS = [
+  new THREE.Vector3(1, 0, 0),
+  new THREE.Vector3(0, 1, 0),
+  new THREE.Vector3(C, C, -D),
+  new THREE.Vector3(C, -C, D),
+];
+const HEX = ['#FE0100', '#0000FF', '#FFCC00', '#1D1D1B'];
+const AXIS_COLORS = HEX.map(h => new THREE.Color(h));
+const DIM = 0.08;
+
+const PORTALS = [
+  // One square face of the tesseract each (two varying 4D axes, two fixed).
+  // `rest` = the 4D rotation that turns that face into a true square facing the viewer.
+  { key: 'sport',      axis: 0, span: [0, 2], fixed: [[1,  1], [3,  1]], rest: { yz: Math.PI / 2 } },
+  { key: 'mobiliteit', axis: 1, span: [1, 3], fixed: [[0, -1], [2, -1]], rest: { xw: Math.PI / 2 } },
+  { key: 'over',       axis: 3, span: [0, 1], fixed: [[2,  1], [3, -1]], rest: {} },   // deepest face: the camera travels into the cube
+];
+const PLANES = { yz: [1, 2], xw: [0, 3], zw: [2, 3] };
+const ANGLE_KEYS = ['yz', 'xw', 'zw'];
+
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ==================================================================
+   MOTION: critically-damped springs.
+   Every animated value chases a goal; velocity is preserved when the
+   goal changes, so re-targeting mid-flight (fast hovering between pages)
+   bends the motion instead of restarting it. Frame-rate independent.
+   ================================================================== */
+const cur = {}, vel = {}, goal = {};
+function def(key, v) { cur[key] = goal[key] = v; vel[key] = 0; }
+function spring(key, omega, dt) {
+  const x = cur[key] - goal[key], v = vel[key];
+  const e = Math.exp(-omega * dt), tmp = (v + omega * x) * dt;
+  cur[key] = goal[key] + (x + tmp) * e;
+  vel[key] = (v - omega * tmp) * e;
+}
+const CAM_KEYS = ['cx', 'cy', 'cz', 'lx', 'ly', 'lz'];
+['cx', 'cy', 'lx', 'ly', 'lz'].forEach(k => def(k, 0)); def('cz', 15);
+ANGLE_KEYS.forEach(k => def(k, 0)); def('rotX', 0); def('rotY', 0);
+def('speed', 0); def('px', 0); def('py', 0);
+[0, 1, 2, 3].forEach(b => def('op' + b, 1));
+PORTALS.forEach(p => { def('hl_' + p.key, 0); def('dot_' + p.key, 0); });
+['jr', 'jg', 'jb'].forEach((k, i) => def(k, AXIS_COLORS[0].toArray()[i]));
+
+const OMEGA = { cam: 5.2, ang: 4.6, op: 11, hl: 9, joint: 10, speed: 2.2, par: 4 };
+let camOmega = 2.4;   // slow, cinematic for the intro; switches to OMEGA.cam afterwards
+
+/* ---------------- renderer / scene ---------------- */
+const stage = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setClearColor(0xffffff, 1);
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0xffffff, 12, 22);       // far strokes soften into the white: depth cue
+const camera = new THREE.PerspectiveCamera(30, 1, 0.05, 100);
+const group = new THREE.Group();
+scene.add(group);
+
+/* ---------------- tesseract ---------------- */
+const V4 = Array.from({ length: 16 }, (_, i) => [0, 1, 2, 3].map(b => ((i >> b) & 1 ? 1 : -1)));
+const EDGES = [[], [], [], []];
+for (let i = 0; i < 16; i++) for (let b = 0; b < 4; b++) if (!((i >> b) & 1)) EDGES[b].push([i, i | (1 << b)]);
+
+let wobble = 0;
+const _s = [0, 0, 0, 0];
+function project4(s, ang, out, withWobble) {
+  _s[0] = s[0]; _s[1] = s[1]; _s[2] = s[2]; _s[3] = s[3];
+  for (const k of ANGLE_KEYS) {
+    const a = ang[k] + (withWobble && k === 'xw' ? wobble : 0);
+    if (!a) continue;
+    const [i, j] = PLANES[k], c = Math.cos(a), sn = Math.sin(a);
+    const u = _s[i] * c - _s[j] * sn, v = _s[i] * sn + _s[j] * c;
+    _s[i] = u; _s[j] = v;
+  }
+  return out.set(0, 0, 0)
+    .addScaledVector(BASIS[0], _s[0]).addScaledVector(BASIS[1], _s[1])
+    .addScaledVector(BASIS[2], _s[2]).addScaledVector(BASIS[3], _s[3]);
+}
+
+// unit tube (radius 1, height 1, along +Y, open ends: they always sit inside a joint ball)
+const tubeGeo = new THREE.CylinderGeometry(1, 1, 1, 32, 1, true);
+const ballGeo = new THREE.SphereGeometry(1, 32, 20);
+const discGeo = new THREE.CircleGeometry(1, 48);   // joint: camera-facing disc (see setJoint)
+const ZAX = new THREE.Vector3(0, 0, 1), camLocal = new THREE.Vector3();
+const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _sc = new THREE.Vector3(), _mid = new THREE.Vector3();
+const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _d = new THREE.Vector3(), UP = new THREE.Vector3(0, 1, 0), QI = new THREE.Quaternion();
+function setTube(mesh, k, a, b, r) {
+  _d.subVectors(b, a); const len = _d.length() || 1e-6;
+  _mid.addVectors(a, b).multiplyScalar(0.5);
+  _q.setFromUnitVectors(UP, _d.multiplyScalar(1 / len));
+  mesh.setMatrixAt(k, _m.compose(_mid, _q, _sc.set(r, len, r)));
+}
+function setBall(mesh, k, p, r) { mesh.setMatrixAt(k, _m.compose(p, QI, _sc.set(r, r, r))); }
+// Joint disc: faces the camera and sits just in front of the vertex (by slightly more than the stroke
+// radius). A tube's front surface is at most one radius toward the viewer, so locally the disc always
+// covers the four stroke ends meeting there (the joint colour rule decides), while any stroke that
+// genuinely passes in front of the corner in 3D still hides it (depth decides).
+function setJoint(mesh, k, p, r) {
+  _d.subVectors(camLocal, p).normalize();
+  _mid.copy(p).addScaledVector(_d, r * 1.08);
+  _q.setFromUnitVectors(ZAX, _d);
+  mesh.setMatrixAt(k, _m.compose(_mid, _q, _sc.set(r, r, 1)));
+}
+
+const P = Array.from({ length: 16 }, () => new THREE.Vector3());
+const tubes = AXIS_COLORS.map(col => {
+  const mat = new THREE.MeshBasicMaterial({ color: col, transparent: false, opacity: 1 });
+  const m = new THREE.InstancedMesh(tubeGeo, mat, 8);
+  m.frustumCulled = false; group.add(m); return m;
+});
+const jointMat = new THREE.MeshBasicMaterial({ color: AXIS_COLORS[0].clone() });
+const joints = new THREE.InstancedMesh(discGeo, jointMat, 16);
+joints.frustumCulled = false; joints.renderOrder = 3; group.add(joints);
+
+/* ---------------- portals ---------------- */
+const CORNERS = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+const hitTargets = [];
+for (const p of PORTALS) {
+  p.color = AXIS_COLORS[p.axis];
+  p.v4 = CORNERS.map(([a, b]) => { const s = [0, 0, 0, 0]; s[p.span[0]] = a; s[p.span[1]] = b; p.fixed.forEach(([ax, v]) => (s[ax] = v)); return s; });
+  p.pts = p.v4.map(() => new THREE.Vector3());
+  p.center = new THREE.Vector3(); p.normal = new THREE.Vector3();
+  p.label = document.querySelector(`.label[data-portal="${p.key}"]`);
+  p.pill = document.querySelector(`.pill[data-portal="${p.key}"]`);
+
+  // invisible quad = hover/click area
+  const qg = new THREE.BufferGeometry();
+  qg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(12), 3));
+  qg.setIndex([0, 1, 2, 0, 2, 3]);
+  p.hit = new THREE.Mesh(qg, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }));
+  p.hit.userData.portal = p; p.hit.frustumCulled = false;
+  group.add(p.hit); hitTargets.push(p.hit);
+
+  // highlight of the open face: a slightly fatter tube+ball sheath around its 4 edges.
+  // Coaxial and larger than the base strokes, so it encloses them cleanly (no coplanar overlap).
+  p.hlMat = new THREE.MeshBasicMaterial({ color: p.color, transparent: true, opacity: 0, depthWrite: false });
+  p.hlTubes = new THREE.InstancedMesh(tubeGeo, p.hlMat, 4);
+  p.hlBalls = new THREE.InstancedMesh(discGeo, p.hlMat, 4);
+  [p.hlTubes, p.hlBalls].forEach(m => { m.frustumCulled = false; m.renderOrder = 4; m.visible = false; group.add(m); });
+
+  // pulsing marker at the face centre: affordance + extra hit area
+  p.dotMat = new THREE.MeshBasicMaterial({ color: p.color, transparent: true, opacity: 0, depthWrite: false });
+  p.dot = new THREE.Mesh(ballGeo, p.dotMat);
+  const dotHit = new THREE.Mesh(new THREE.SphereGeometry(0.34 / 0.075, 10, 8), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
+  dotHit.userData.portal = p; p.dot.add(dotHit); hitTargets.push(dotHit);
+  group.add(p.dot);
+}
+
+function faceFor(ang, p, ptsOut, centerOut, normalOut, withWobble) {
+  p.v4.forEach((s, i) => project4(s, ang, ptsOut[i], withWobble));
+  centerOut.set(0, 0, 0); ptsOut.forEach(v => centerOut.add(v)); centerOut.multiplyScalar(0.25);
+  normalOut.subVectors(ptsOut[1], ptsOut[0]).cross(_a.subVectors(ptsOut[3], ptsOut[0])).normalize();
+  if (normalOut.z < 0) normalOut.negate();
+}
+
+let active = null;
+function updateGeometry(t) {
+  for (let i = 0; i < 16; i++) project4(V4[i], cur, P[i], true);
+  for (let b = 0; b < 4; b++) {
+    EDGES[b].forEach(([i, j], k) => setTube(tubes[b], k, P[i], P[j], R));   // ends exactly on the vertices
+    tubes[b].instanceMatrix.needsUpdate = true;
+  }
+  for (let i = 0; i < 16; i++) setJoint(joints, i, P[i], R);                 // one joint per vertex
+  joints.instanceMatrix.needsUpdate = true;
+
+  for (const p of PORTALS) {
+    faceFor(cur, p, p.pts, p.center, p.normal, true);
+    const pos = p.hit.geometry.attributes.position;
+    const grow = p === active ? 1.75 : 1.12;    // an open face keeps a generous hover zone
+    p.pts.forEach((v, i) => { _b.copy(v).sub(p.center).multiplyScalar(grow).add(p.center); pos.setXYZ(i, _b.x, _b.y, _b.z); });
+    pos.needsUpdate = true; p.hit.geometry.computeBoundingSphere();
+
+    const hl = cur['hl_' + p.key];
+    const show = hl > 0.004;
+    p.hlTubes.visible = p.hlBalls.visible = show;
+    if (show) {
+      const rh = R * (1 + 0.32 * hl);
+      for (let k = 0; k < 4; k++) { setTube(p.hlTubes, k, p.pts[k], p.pts[(k + 1) % 4], rh); setJoint(p.hlBalls, k, p.pts[k], rh); }
+      p.hlTubes.instanceMatrix.needsUpdate = p.hlBalls.instanceMatrix.needsUpdate = true;
+      p.hlMat.opacity = Math.min(1, hl * 1.2);
+    }
+    p.dot.position.copy(p.center);
+    const pulse = 0.075 * (1 + Math.sin(t * 2.4 + p.axis) * 0.18);
+    p.dot.scale.setScalar(pulse);
+    p.dotMat.opacity = cur['dot_' + p.key];
+    p.dot.visible = p.dotMat.opacity > 0.01;
+  }
+}
+
+/* colour visibility: vivid strokes are opaque and write depth; dimmed strokes
+   are translucent, don't write depth, and draw first — so a dimmed stroke can
+   never punch a hole in a vivid one behind it. */
+function applyMaterials() {
+  for (let b = 0; b < 4; b++) {
+    const m = tubes[b].material, o = cur['op' + b];
+    const opaque = o > 0.995;
+    if (m.transparent === opaque) { m.transparent = !opaque; m.depthWrite = opaque; m.needsUpdate = true; }
+    m.opacity = opaque ? 1 : Math.max(0, o);
+    tubes[b].renderOrder = opaque ? 2 : 1;
+  }
+  jointMat.color.setRGB(cur.jr, cur.jg, cur.jb);
+}
+
+/* ---------------- camera ---------------- */
+const HOME = { yaw: -0.42, pitch: 0.2, dist: 13.5 };
+function setHomeGoal() {
+  goal.cx = Math.sin(HOME.yaw) * Math.cos(HOME.pitch) * HOME.dist;
+  goal.cy = Math.sin(HOME.pitch) * HOME.dist;
+  goal.cz = Math.cos(HOME.yaw) * Math.cos(HOME.pitch) * HOME.dist;
+  goal.lx = goal.ly = goal.lz = 0;
+}
+const restPts = [0, 1, 2, 3].map(() => new THREE.Vector3()), restC = new THREE.Vector3(), restN = new THREE.Vector3();
+function setPortalGoal(p) {
+  faceFor({ yz: 0, xw: 0, zw: 0, ...p.rest }, p, restPts, restC, restN, false);
+  const size = Math.max(restPts[0].distanceTo(restPts[1]), restPts[0].distanceTo(restPts[3])) * 1.35;
+  const t = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), fill = 0.54;
+  const dist = Math.max(size / (2 * t * fill), size / (2 * t * camera.aspect * fill));
+  goal.cx = restC.x + restN.x * dist; goal.cy = restC.y + restN.y * dist; goal.cz = restC.z + restN.z * dist;
+  goal.lx = restC.x; goal.ly = restC.y; goal.lz = restC.z;
+}
+const wrapPi = a => ((((a + Math.PI) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) - Math.PI;
+const nearest = (from, target) => from - wrapPi(from - target);   // shortest way round
+
+/* ---------------- engage / disengage ---------------- */
+const hint = document.getElementById('hint');
+const pillsEl = document.getElementById('pills');
+let leaving = null;                                                     // page we're animating towards before redirecting
+let engagedAt = -1, now = 0, introDone = false;
+
+function setJointGoal(col) { goal.jr = col.r; goal.jg = col.g; goal.jb = col.b; }
+function engage(p) {
+  if (active === p) return;
+  if (active) active.label.classList.remove('show');
+  active = p; engagedAt = now;
+  goal.speed = 0;
+  const rest = { yz: 0, xw: 0, zw: 0, ...p.rest };
+  ANGLE_KEYS.forEach(k => (goal[k] = nearest(cur[k], rest[k])));       // turn through the 4th dimension
+  goal.rotX = 0; goal.rotY = nearest(cur.rotY, 0);
+  setPortalGoal(p);
+  for (let b = 0; b < 4; b++) goal['op' + b] = b === p.axis ? 1 : DIM;  // page colour pops, the rest recedes
+  PORTALS.forEach(q => { goal['hl_' + q.key] = q === p ? 1 : 0; goal['dot_' + q.key] = 0; });
+  setJointGoal(p.color);
+  hint.classList.add('hide');
+  PORTALS.forEach(q => q.pill.classList.toggle('on', q === p)); pillsEl.classList.add('has-on');
+}
+function disengage() {
+  if (!active || leaving) return;
+  active.label.classList.remove('show');
+  if (document.activeElement === active.label) active.label.blur();
+  active = null;
+  goal.yz = nearest(cur.yz, 0); goal.xw = nearest(cur.xw, 0);           // fold the face back into the cube
+  setHomeGoal();
+  goal.speed = reduceMotion ? 0 : 1;
+  for (let b = 0; b < 4; b++) goal['op' + b] = 1;
+  PORTALS.forEach(q => { goal['hl_' + q.key] = 0; goal['dot_' + q.key] = 1; });
+  setJointGoal(AXIS_COLORS[0]);
+  hint.classList.remove('hide');
+  PORTALS.forEach(q => q.pill.classList.remove('on', 'go')); pillsEl.classList.remove('has-on');
+}
+
+/* ---------------- input ---------------- */
+const pointer = new THREE.Vector2(9, 9);
+let pointerIn = false, overLabel = false, overPill = false;
+const raycaster = new THREE.Raycaster();
+const drag = { on: false, moved: false, x: 0, y: 0 };
+let pending = null, pendingAt = 0, leaveAt = -1;
+
+function setPointer(e) {
+  pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  pointerIn = true; goal.px = pointer.x; goal.py = pointer.y;
+}
+function hits() {
+  if (!pointerIn) return [];
+  raycaster.setFromCamera(pointer, camera);
+  return raycaster.intersectObjects(hitTargets, false).map(i => i.object.userData.portal);
+}
+// Hover is resolved every frame (not only on mousemove): the cube keeps moving under a still cursor.
+function hoverTick() {
+  if (!introDone || drag.moved) return;
+  const h = hits();
+  if (!active) {
+    const p = h[0] || null;
+    stage.classList.toggle('over-portal', !!p);
+    if (p !== pending) { pending = p; pendingAt = now; }
+    else if (p && now - pendingAt > 0.07) engage(p);                     // short hover intent
+    return;
+  }
+  if (now - engagedAt < 0.45 || window.__hc?.hold || leaving) return;               // let the camera arrive first
+  if (h.includes(active) || overLabel || overPill) { leaveAt = -1; return; }
+  if (h[0]) { engage(h[0]); leaveAt = -1; return; }                      // glide straight to another page
+  if (leaveAt < 0) leaveAt = now;
+  else if (now - leaveAt > 0.26) { leaveAt = -1; disengage(); }
+}
+
+stage.addEventListener('pointerdown', e => {
+  setPointer(e); drag.on = true; drag.moved = false; drag.x = e.clientX; drag.y = e.clientY;
+  stage.setPointerCapture(e.pointerId);
+});
+stage.addEventListener('pointermove', e => {
+  setPointer(e);
+  if (drag.on && !active) {
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag.moved && Math.abs(dx) + Math.abs(dy) > 4) { drag.moved = true; stage.classList.add('dragging'); pending = null; }
+    if (drag.moved) {
+      goal.rotY += dx * 0.007;                                            // the spring adds the inertia
+      goal.rotX = THREE.MathUtils.clamp(goal.rotX + dy * 0.005, -0.7, 0.7);
+      drag.x = e.clientX; drag.y = e.clientY;
+    }
+  }
+});
+stage.addEventListener('pointerup', e => {
+  setPointer(e); stage.classList.remove('dragging');
+  const wasDrag = drag.moved; drag.on = false; drag.moved = false;
+  if (wasDrag) return;
+  const h = hits();
+  if (active && h.includes(active) && now - engagedAt > 0.3) { (window.top || window).location.href = active.label.href; return; }
+  if (h[0]) { engage(h[0]); return; }                                     // touch: first tap opens the face
+  if (active && !overLabel && !overPill) disengage();
+});
+stage.addEventListener('pointerleave', () => { if (!drag.on) { pointerIn = false; goal.px = goal.py = 0; } });
+
+for (const p of PORTALS) {
+  p.label.addEventListener('pointerenter', () => { overLabel = true; leaveAt = -1; });
+  p.label.addEventListener('pointerleave', () => { overLabel = false; });
+  p.label.addEventListener('focus', () => engage(p));                    // keyboard: Tab through the three pages
+  p.label.addEventListener('blur', () => setTimeout(() => { if (active === p && !document.activeElement?.matches('.label')) disengage(); }, 50));
+}
+// Pills: hover/focus moves the cube to that page; click plays the move to the end, then redirects.
+function go(p) {
+  if (leaving) return;
+  const settled = active === p && now - engagedAt > 0.6;
+  engage(p); leaving = p; p.pill.classList.add('go');
+  setTimeout(() => { (window.top || window).location.href = p.pill.href; }, reduceMotion ? 0 : settled ? 260 : 950);
+}
+for (const p of PORTALS) {
+  p.pill.addEventListener('pointerenter', e => { overPill = true; leaveAt = -1; if (e.pointerType === 'mouse' && introDone) engage(p); });
+  p.pill.addEventListener('pointerleave', () => { overPill = false; });
+  p.pill.addEventListener('focus', () => { if (!leaving) engage(p); });
+  p.pill.addEventListener('blur', () => setTimeout(() => { if (active === p && !document.activeElement?.matches('.pill, .label')) disengage(); }, 50));
+  p.pill.addEventListener('click', e => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;   // let "open in new tab" work normally
+    e.preventDefault(); go(p);
+  });
+}
+// Back button: the browser may restore this page exactly as it was left (parked on a face, pointer "on" a pill).
+// Release everything so the cube folds back and resumes rotating.
+addEventListener('pageshow', e => {
+  if (!e.persisted) return;
+  leaving = null; overLabel = false; overPill = false; pointerIn = false; pending = null; leaveAt = -1;
+  drag.on = drag.moved = false; stage.classList.remove('dragging', 'over-portal');
+  goal.px = goal.py = 0;
+  if (document.activeElement?.matches('.pill, .label')) document.activeElement.blur();
+  disengage();
+  PORTALS.forEach(q => q.pill.classList.remove('go', 'on')); pillsEl.classList.remove('has-on');
+  clock.getDelta();                                                      // don't count the time spent on the other page
+});
+addEventListener('keydown', e => { if (e.key === 'Escape') disengage(); });
+
+/* ---------------- resize ---------------- */
+function resize() {
+  const w = innerWidth || stage.clientWidth || 1, h = innerHeight || stage.clientHeight || 1;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  HOME.dist = 13.5 * Math.max(1, 0.8 / (camera.aspect || 1));      // keep the cube in frame on portrait screens
+  camera.updateProjectionMatrix();
+  if (active) setPortalGoal(active); else if (introDone) setHomeGoal();
+}
+addEventListener('resize', resize);
+resize();
+cur.cz = goal.cz = HOME.dist;   // intro starts head-on: the flat logo
+
+/* ---------------- loop ---------------- */
+const right = new THREE.Vector3(), up = new THREE.Vector3(), _v = new THREE.Vector3();
+let lastLabelX = NaN, lastLabelY = NaN;
+function tick(dt, t) {
+  now = t;
+  // intro: hold the flat logo, then unfold into the hypercube
+  if (!introDone && t > 0.7 && goal.cx === 0 && !active) { setHomeGoal(); goal.speed = reduceMotion ? 0 : 1; PORTALS.forEach(q => (goal['dot_' + q.key] = 1)); }
+  if (!introDone && t > 2.6) { introDone = true; camOmega = OMEGA.cam; }
+
+  // idle drift through the 4th dimension (goals advance, springs follow)
+  goal.zw += dt * 0.16 * cur.speed;
+  goal.rotY += dt * 0.06 * cur.speed;
+
+  CAM_KEYS.forEach(k => spring(k, camOmega, dt));
+  ANGLE_KEYS.forEach(k => spring(k, OMEGA.ang, dt));
+  spring('rotX', OMEGA.ang, dt); spring('rotY', OMEGA.ang, dt);
+  spring('speed', OMEGA.speed, dt);
+  spring('px', OMEGA.par, dt); spring('py', OMEGA.par, dt);
+  for (let b = 0; b < 4; b++) spring('op' + b, OMEGA.op, dt);
+  PORTALS.forEach(p => { spring('hl_' + p.key, OMEGA.hl, dt); spring('dot_' + p.key, OMEGA.hl, dt); });
+  ['jr', 'jg', 'jb'].forEach(k => spring(k, OMEGA.joint, dt));
+  wobble = Math.sin(t * 0.11) * 0.2 * cur.speed;
+
+  // camera + gentle pointer parallax (physical, 3D feel)
+  camera.position.set(cur.cx, cur.cy, cur.cz);
+  camera.lookAt(cur.lx, cur.ly, cur.lz);
+  camera.updateMatrixWorld();
+  const k = active ? 0.12 : 0.35;
+  right.setFromMatrixColumn(camera.matrixWorld, 0); up.setFromMatrixColumn(camera.matrixWorld, 1);
+  camera.position.addScaledVector(right, cur.px * k).addScaledVector(up, cur.py * k);
+  camera.lookAt(cur.lx, cur.ly, cur.lz);
+  camera.updateMatrixWorld();
+
+  group.rotation.set(cur.rotX, cur.rotY, 0);
+  group.updateMatrixWorld();
+  camLocal.copy(camera.position); group.worldToLocal(camLocal);   // joints face the camera
+  updateGeometry(t);
+  applyMaterials();
+  const camDist = Math.hypot(cur.cx - cur.lx, cur.cy - cur.ly, cur.cz - cur.lz);
+  scene.fog.near = camDist - 0.5; scene.fog.far = camDist + 9;
+
+  hoverTick();
+  renderer.render(scene, camera);
+
+  // label: pinned to its face (GPU-composited transform), revealed once the camera is mostly there
+  if (active) {
+    _v.copy(active.center).applyMatrix4(group.matrixWorld).project(camera);
+    const x = Math.round((_v.x * 0.5 + 0.5) * innerWidth), y = Math.round((-_v.y * 0.5 + 0.5) * innerHeight);
+    if (x !== lastLabelX || y !== lastLabelY) { active.label.style.setProperty('--x', x + 'px'); active.label.style.setProperty('--y', y + 'px'); lastLabelX = x; lastLabelY = y; }
+    if (now - engagedAt > 0.28) active.label.classList.add('show');
+  }
+}
+
+const clock = new THREE.Clock();
+let simT = 0;
+// Real-time loop always runs. A script calling __hc.advance() switches to stepped time (automated checks only),
+// so ?test in the address bar still animates normally for a person looking at it.
+let stepped = false;
+function frame() { if (stepped) return; tick(Math.min(clock.getDelta(), 1 / 20), clock.elapsedTime); requestAnimationFrame(frame); }
+requestAnimationFrame(frame);
+function advance(sec) { stepped = true; for (let i = 0; i < Math.round(sec * 60); i++) { simT += 1 / 60; tick(1 / 60, simT); } }
+
+window.__hc = { engage: k => engage(PORTALS.find(p => p.key === k)), disengage, advance, cur, goal, PORTALS, camera, group, P,
+  closeUp: (i, d = 1.6) => { const w = P[i].clone().applyMatrix4(group.matrixWorld), dir = camera.position.clone().sub(w).normalize();
+    ['cx', 'cy', 'cz'].forEach((k, j) => (cur[k] = goal[k] = w.getComponent(j) + dir.getComponent(j) * d)); ['lx', 'ly', 'lz'].forEach((k, j) => (cur[k] = goal[k] = w.getComponent(j))); cur.speed = goal.speed = 0; },
+  hover: (x, y) => stage.dispatchEvent(new PointerEvent('pointermove', { clientX: x, clientY: y, bubbles: true })),
+  screenOf: k => { const p = PORTALS.find(q => q.key === k); const v = p.center.clone().applyMatrix4(group.matrixWorld).project(camera); return [(v.x * .5 + .5) * innerWidth, (-v.y * .5 + .5) * innerHeight]; },
+  vertexScreen: i => { const v = P[i].clone().applyMatrix4(group.matrixWorld).project(camera); return [(v.x * .5 + .5) * innerWidth, (-v.y * .5 + .5) * innerHeight]; } }; // test hook
+</script>
+</body>
+</html>
