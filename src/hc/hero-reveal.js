@@ -421,6 +421,15 @@
         snap: { snapTo: v => (st && st.direction < 0) ? v : (keypoints().find(k => k >= v - 1e-4) ?? v), inertia: false, duration: { min: .35, max: 1.1 }, delay: .1, ease: 'power2.inOut' },
       });
       p.st = st;
+      // the pin freezes the page at the height it had when measured; opening another tab (or an image loading)
+      // changes the content height, so re-measure and the rest of the page (footer) follows the new bottom
+      if (window.ResizeObserver) {
+        let h = p.copy.offsetHeight, t = 0;
+        new ResizeObserver(() => {
+          const n = p.copy.offsetHeight; if (Math.abs(n - h) < 2) return; h = n;
+          clearTimeout(t); t = setTimeout(() => ScrollTrigger.refresh(), 60);
+        }).observe(p.copy);
+      }
       ScrollTrigger.addEventListener('refresh', () => {
         measure(); const at = tl.progress(); tl.invalidate().progress(1, true).progress(at); draw();
         reached = Math.max(reached, st ? st.progress : 0);
