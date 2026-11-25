@@ -1,5 +1,5 @@
-/* Contact form (Over Hypercube / About Hypercube, Contact tab): layout fixes and fill helpers.
-   The helpers use the NL / EN switch's language: IBM Plex Mono, 1.5px #1D1D1B outline, filled when chosen. */
+/* Contact form (Over Hypercube / About Hypercube, Contact tab): layout fixes and the e-mail dropdown.
+   The dropdown uses the NL / EN switch's language: IBM Plex Mono, 1.5px #1D1D1B outline, the chosen row filled. */
 
 /* the Cloudflare Turnstile check only runs on hypercube.nl; here it would be an empty dark block */
 #gform_wrapper_1 .gfield--type-turnstile { display: none !important; }
@@ -11,35 +11,21 @@
 .hc-form-note[hidden] { display: none; }
 .hc-form-note a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 
-/* phone: number type sits in the label row, right-aligned */
-.hc-label-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
-.hc-label-row > label { margin: 0 !important; }
+/* e-mail: suggested addresses drop down from the field, over what follows */
+#gform_wrapper_1 .hc-combo { position: relative; }
+#gform_wrapper_1 .hc-suggest { position: absolute; z-index: 30; top: 100%; left: 0; right: 0; margin: 0; padding: 0; list-style: none;
+  max-height: 248px; overflow-y: auto; background: #fff; border: 1.5px solid #1D1D1B; box-sizing: border-box; }
+#gform_wrapper_1 .hc-suggest[hidden] { display: none; }
+#gform_wrapper_1 .hc-opt { display: flex; margin: 0; padding: 9px 10px 8px; list-style: none; cursor: pointer;
+  font: 400 14px/18px "IBM Plex Mono", ui-monospace, Menlo, monospace; color: #1D1D1B; white-space: nowrap; overflow: hidden; }
+#gform_wrapper_1 .hc-opt + .hc-opt { border-top: 1px solid #EDEDEB; }
+#gform_wrapper_1 .hc-opt-local { color: #6A6A67; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+#gform_wrapper_1 .hc-opt-domain { flex: none; }
+#gform_wrapper_1 .hc-opt[aria-selected="true"] { background: #1D1D1B; color: #fff; }
+#gform_wrapper_1 .hc-opt[aria-selected="true"] .hc-opt-local { color: rgba(255, 255, 255, .7); }
 
-/* chips and the two-way switch */
-.hc-fill { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
-.hc-fill[hidden] { display: none; }
-#gform_wrapper_1 .hc-chip, #gform_wrapper_1 .hc-seg button { appearance: none; -webkit-appearance: none; margin: 0; border: 1.5px solid #1D1D1B !important; border-radius: 0 !important; box-shadow: none !important; background: transparent; color: #1D1D1B; height: auto; min-height: 0; width: auto;
-  font: 400 13px/16px "IBM Plex Mono", ui-monospace, Menlo, monospace !important; letter-spacing: .02em; text-transform: none; padding: 4px 8px 3px !important; cursor: pointer;
-  transition: background-color .15s, color .15s; }
-#gform_wrapper_1 .hc-chip:hover, #gform_wrapper_1 .hc-chip:focus-visible, #gform_wrapper_1 .hc-seg button:hover, #gform_wrapper_1 .hc-seg button:focus-visible { background: #fff; color: #1D1D1B; }
-#gform_wrapper_1 .hc-chip[aria-pressed="true"], #gform_wrapper_1 .hc-seg button[aria-pressed="true"] { background: #1D1D1B; color: #fff; }
-.hc-chip:focus-visible, .hc-seg button:focus-visible { outline: 2px solid #0000FF; outline-offset: 2px; }
-.hc-seg { display: inline-flex; }
-#gform_wrapper_1 .hc-seg button { text-transform: uppercase; letter-spacing: .08em; font-size: 12px !important; padding: 4px 9px 3px !important; }
-#gform_wrapper_1 .hc-seg button + button { border-left: 0 !important; }
-
-/* hint under the phone number: the format to aim for, and a square that fills when the number is complete */
-.hc-hint { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; font: 400 13px/16px "IBM Plex Mono", ui-monospace, Menlo, monospace; color: #1D1D1B; }
-.hc-hint::before { content: ''; width: 10px; height: 10px; border: 2.5px solid #1D1D1B; box-sizing: border-box; flex: none; transition: background-color .15s; }
-.hc-hint.ok::before { background: #1D1D1B; }
-
-#gform_wrapper_1 .gfield--type-email { padding-bottom: 6px; }
 @media (max-width: 640px) {
   #gform_wrapper_1 .gform_footer .gform_button { width: 100% !important; }
-  /* one row you can swipe through instead of four rows of endings */
-  .hc-fill { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; margin-right: -16px; padding-right: 16px; }
-  .hc-fill::-webkit-scrollbar { display: none; }
-  #gform_wrapper_1 .hc-chip { flex: none; }
   .hc-form-note { flex-basis: 100%; }
+  #gform_wrapper_1 .hc-opt { padding: 11px 10px 10px; }   /* bigger touch targets */
 }
-@media (prefers-reduced-motion: reduce) { .hc-chip, .hc-seg button, .hc-hint::before { transition: none; } }

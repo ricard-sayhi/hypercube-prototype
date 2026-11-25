@@ -39,4 +39,4 @@ python3 tools/build.py ../hypercube-site dist
 ## Notes
 
 - **Animation:** GSAP 3.12.5 (ScrollTrigger, CustomEase) and Three.js r170 load from public CDNs.
-- **Contact form:** it doesn't send from the prototype: its Cloudflare Turnstile check only works on hypercube.nl, so the check is hidden here and Versturen, after checking the required fields, says so and offers the message as an e-mail to info@hypercube.nl. The form gets one-tap e-mail endings (@gmail.com, @hotmail.com, ...) and a Mobiel / Vast switch that formats Dutch numbers as you type (`src/hc/form.css`, `form.js`).
+- **Contact form:** it doesn't send from the prototype: its Cloudflare Turnstile check only works on hypercube.nl, so the check is hidden here and Versturen, after checking the required fields, says so and offers the message as an e-mail to info@hypercube.nl. The e-mail field gets a dropdown of common addresses (anna@gmail.com, anna@hotmail.com, ...) that narrows as you type after the @ (`src/hc/form.css`, `form.js`).
