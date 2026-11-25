@@ -176,11 +176,11 @@ function spring(key, omega, dt) {
   vel[key] = (v - omega * tmp) * e;
 }
 ANGLE_KEYS.forEach(k => def(k, 0));
-def('speed', 0);
+def('speed', 0); def('fill', 1);
 [0, 1, 2, 3].forEach(b => def('op' + b, 1));
 PORTALS.forEach(p => { def('hl_' + p.key, 0); def('dot_' + p.key, 0); def('lb_' + p.key, 0); });
 ['jr', 'jg', 'jb'].forEach((k, i) => def(k, AXIS_COLORS[0].toArray()[i]));
-const OMEGA = { ang: 4.6, op: 11, hl: 9, joint: 10, speed: 2.2, label: 9, turn: 4.2 };
+const OMEGA = { ang: 4.6, op: 11, hl: 9, joint: 10, speed: 2.2, label: 9, turn: 4.2, fill: 8 };
 
 /* ---------------- renderer / scene / camera ---------------- */
 const stage = document.getElementById('stage');
@@ -257,6 +257,26 @@ const tubes = AXIS_COLORS.map(col => {
 const jointMat = new THREE.MeshBasicMaterial({ color: AXIS_COLORS[0].clone() });
 const joints = new THREE.InstancedMesh(discGeo, jointMat, 16);
 joints.frustumCulled = false; joints.renderOrder = 3; group.add(joints);
+
+/* Top and bottom: the horizontal faces that close the cube (spanned by the red x and yellow z bars, y fixed at
+   the top or the bottom, for both the outer and the inner cube). A very soft fill in the brand yellow gives the
+   eye a lid and a floor, so the volume and the coloured faces between them read more easily. */
+const FILL_HEX = '#FFCC00', FILL_OPACITY = 0.10;                    // reads as a pale cream (~#FFFAE6) on white
+const FILLS = [];
+for (const y of [0, 1]) for (const w of [0, 1]) FILLS.push([[0, 0], [1, 0], [1, 1], [0, 1]].map(([x, z]) => x | (y << 1) | (z << 2) | (w << 3)));
+const fillGeo = new THREE.BufferGeometry();
+fillGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(FILLS.length * 4 * 3), 3));
+fillGeo.setIndex(FILLS.flatMap((_, f) => [f * 4, f * 4 + 1, f * 4 + 2, f * 4, f * 4 + 2, f * 4 + 3]));
+const fillMat = new THREE.MeshBasicMaterial({ color: FILL_HEX, transparent: true, opacity: FILL_OPACITY, depthWrite: false, side: THREE.DoubleSide });
+const fills = new THREE.Mesh(fillGeo, fillMat);
+fills.frustumCulled = false; fills.renderOrder = 0; group.add(fills);
+function updateFills() {
+  const pos = fillGeo.attributes.position;
+  FILLS.forEach((quad, f) => quad.forEach((vi, k) => pos.setXYZ(f * 4 + k, P[vi].x, P[vi].y, P[vi].z)));
+  pos.needsUpdate = true;
+  fillMat.opacity = FILL_OPACITY * cur.fill;
+  fills.visible = fillMat.opacity > 0.002;
+}
 
 /* ---------------- faces, their labels ---------------- */
 const FONT_TITLE = 'https://cdn.jsdelivr.net/npm/@fontsource/ibm-plex-mono@5.0.13/files/ibm-plex-mono-latin-400-normal.woff';
@@ -337,6 +357,7 @@ function updateGeometry(t) {
   }
   for (let i = 0; i < 16; i++) setJoint(joints, i, P[i], R);
   joints.instanceMatrix.needsUpdate = true;
+  updateFills();
 
   for (const p of PORTALS) {
     faceFor(cur, p, p.pts, p.center, p.normal, p.u, p.v, true);
@@ -444,6 +465,7 @@ function engage(p) {
   ANGLE_KEYS.forEach(k => (goal[k] = nearest(cur[k], rest[k])));       // the face becomes a true square (through the 4th dimension)
   turnTo(p);                                                            // and turns its outer side to the viewer
   for (let b = 0; b < 4; b++) goal['op' + b] = b === p.axis ? 1 : DIM;
+  goal.fill = 0.35;                                                     // the lid and floor recede with the other bars
   PORTALS.forEach(q => { goal['hl_' + q.key] = q === p ? 1 : 0; goal['dot_' + q.key] = 0; goal['lb_' + q.key] = 0; });
   setJointGoal(p.color);
   hint.classList.add('hide');
@@ -457,6 +479,7 @@ function disengage() {
   goHome();
   goal.speed = reduceMotion ? 0 : 1;
   for (let b = 0; b < 4; b++) goal['op' + b] = 1;
+  goal.fill = 1;
   PORTALS.forEach(q => { goal['hl_' + q.key] = 0; goal['dot_' + q.key] = 1; goal['lb_' + q.key] = 0; });
   setJointGoal(AXIS_COLORS[0]);
   hint.classList.remove('hide');
@@ -583,7 +606,7 @@ function tick(dt, t) {
   if (introDone && !active && !orbiting && !press.on && cur.speed > 0.01) controls.rotate(dt * 0.06 * cur.speed, 0, false);
 
   ANGLE_KEYS.forEach(k => spring(k, OMEGA.ang, dt));
-  spring('speed', OMEGA.speed, dt);
+  spring('speed', OMEGA.speed, dt); spring('fill', OMEGA.fill, dt);
   for (let b = 0; b < 4; b++) spring('op' + b, OMEGA.op, dt);
   PORTALS.forEach(p => { spring('hl_' + p.key, OMEGA.hl, dt); spring('dot_' + p.key, OMEGA.hl, dt); spring('lb_' + p.key, OMEGA.label, dt); });
   ['jr', 'jg', 'jb'].forEach(k => spring(k, OMEGA.joint, dt));
