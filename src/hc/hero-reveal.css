@@ -80,6 +80,12 @@ h2.hc-title span { display: inline-block; }
 .hc-shift-home { margin-bottom: -20vh; }
 .hc-home3d { position: relative; height: 100vh; height: 100svh; background: #fff; }
 .hc-home3d iframe { display: block; width: 100%; height: 100%; border: 0; }
+/* tablet / phone: the theme lifts the home rows (translate_y_phone_-15vh ...) to overlap the old squares, which put
+   them over the cube and its page buttons; there the content simply follows the hero */
+@media (max-width: 999px) {
+  .hc-shift-home { margin-bottom: 0; }
+  .hc-shift-home ~ .vc_row { -webkit-transform: none !important; transform: none !important; }
+}
 
 @media (max-width: 999px) {
   .hc-mi { font-size: 14px; line-height: 22px; padding: 6px 16px; gap: 8px; }
