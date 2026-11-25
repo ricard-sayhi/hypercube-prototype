@@ -15,7 +15,8 @@ A working prototype of hypercube.nl with the new interactive heroes. This is a d
      - **Over Hypercube:** the hypercube draws itself from the centre outwards (trim path), then the section squares pop in.
   3. The menu under the image is the page's own tab navigation. The menu and the image markers are linked, and both open the original tabs.
   4. The first tab's text reveals in random 3–6 word groups, in reading order. The page won't scroll past the image until the text on screen has fully appeared.
-- **Everything else:** the original site as mirrored, with the original header, menu, NL/EN switch and footer.
+- **NL / EN switch:** beside the Menu button on every page and at every width (the theme's own switch only showed above 1000 px). Each language links to the page's own translation; the two pages without one link to that language's home.
+- **Everything else:** the original site as mirrored, with the original header, menu and footer.
 
 ## Build
 
@@ -28,7 +29,7 @@ python3 tools/build.py ../hypercube-site dist
 ```
 
 - `../hypercube-site` is the local mirror of hypercube.nl. It isn't in this repo.
-- `src/hc/` holds the hero reveal (`hero-reveal.css`, `hero-reveal.js`) and the 3D landing (`landing/`).
+- `src/hc/` holds the hero reveal (`hero-reveal.css`, `hero-reveal.js`), the language switch styles (`lang.css`) and the 3D landing (`landing/`).
 - `tools/build.py` copies the mirror and rebuilds the six main pages around their tab components. It also swaps the home hero for the 3D landing and makes every URL relative, so the site works from a sub-folder (GitHub Pages).
 
 `dist/` is published on the `gh-pages` branch.

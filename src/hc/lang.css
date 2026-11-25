@@ -1,0 +1,33 @@
+/* NL / EN switch next to the header's Menu button, on every page and at every width.
+   Replaces the theme's own top-bar switch, which the theme hides below 1000 px.
+   IBM Plex Mono uppercase, like the hero menus; the current language is filled, like an active tab. */
+
+#header-outer #menu-top-bar { display: none !important; }
+
+#header-outer .hc-lang { display: inline-flex !important; align-items: stretch; align-self: center; margin: 0 26px 0 0; padding: 0; list-style: none;
+  border: 1.5px solid #1D1D1B; box-sizing: border-box; line-height: 1; }
+#header-outer .hc-lang a { display: block; padding: 5px 9px 4px; font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; font-weight: 400;
+  font-size: 14px; line-height: 16px; letter-spacing: .08em; text-transform: uppercase; text-decoration: none;
+  color: #1D1D1B; background: transparent; transition: background-color .18s, color .18s; }
+#header-outer .hc-lang a:hover, #header-outer .hc-lang a:focus { color: #1D1D1B; background: #EDEDEB; text-decoration: none; }
+#header-outer .hc-lang a[aria-current="true"], #header-outer .hc-lang a[aria-current="true"]:hover { color: #fff; background: #1D1D1B; cursor: default; }
+#header-outer .hc-lang a:focus-visible { outline: 2px solid #0000FF; outline-offset: 2px; }
+
+/* desktop: sits in the right-hand header nav, before the Menu button */
+#header-outer nav.right-side > .hc-lang { margin-right: 28px; }
+
+/* tablet / phone: the theme's mobile header slot, left of the Menu button */
+#header-outer .mobile-header .inner { align-items: center; height: 100%; }
+#header-outer .mobile-header .hc-lang { margin-right: 18px; }
+@media (max-width: 999px) {
+  #header-outer .mobile-header { display: flex !important; align-items: center; }
+}
+@media (max-width: 600px) {
+  #header-outer .hc-lang a { font-size: 12px; line-height: 14px; padding: 4px 6px 3px; letter-spacing: .06em; }
+  #header-outer .mobile-header .hc-lang { margin-right: 0; }
+}
+/* very narrow phones: the logo steps down a little so logo, switch and Menu never touch */
+@media (max-width: 360px) {
+  html body #header-outer #top #logo img { height: 30px !important; width: auto !important; }
+}
+@media (prefers-reduced-motion: reduce) { .hc-lang a { transition: none; } }

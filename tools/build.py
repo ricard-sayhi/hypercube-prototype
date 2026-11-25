@@ -158,6 +158,44 @@ def transform_home(path, lang):
     write(path, str(soup))
 
 
+LANG_HOME = {'nl': '/', 'en': '/en/'}
+LANG_LABEL = {'nl': ('Nederlands', 'NL'), 'en': ('English', 'EN')}
+
+
+def add_lang_switch(soup):
+    """NL / EN switch beside the header's Menu button (desktop nav + mobile header). Each language links to this
+    page's own translation (the page's hreflang alternates); a page with no translation links to that language's home."""
+    header = soup.find(id='header-outer')
+    if not header or header.find(class_='hc-lang'):
+        return False
+    html_lang = (soup.html.get('lang') or 'nl').lower()
+    current = 'en' if html_lang.startswith('en') else 'nl'
+    alts = {l.get('hreflang'): l.get('href') for l in soup.find_all('link', rel='alternate') if l.get('hreflang') in LANG_HOME}
+
+    def switch():
+        nav = soup.new_tag('div', attrs={'class': 'hc-lang', 'role': 'navigation', 'aria-label': {'nl': 'Taal', 'en': 'Language'}[current]})
+        for code in ('nl', 'en'):
+            name, short = LANG_LABEL[code]
+            a = soup.new_tag('a', href=alts.get(code) or LANG_HOME[code], hreflang=code, lang=code, title=name)
+            if code == current:
+                a['aria-current'] = 'true'
+            a.string = short
+            nav.append(a)
+        return nav
+
+    right = header.select_one('nav.right-side')
+    if right:
+        buttons = right.find('ul', class_='buttons')
+        (buttons.insert_before if buttons else right.append)(switch())
+    inner = header.select_one('.mobile-header .inner')
+    if inner:
+        inner.insert(0, switch())
+    head = soup.head
+    if head and not head.find('link', href='/hc/lang.css'):
+        head.append(soup.new_tag('link', rel='stylesheet', href='/hc/lang.css'))
+    return True
+
+
 ROOT_ATTR = re.compile(r'''(\s(?:href|src|action|poster|content|data-[\w-]+)\s*=\s*["'])/(?!/)''')
 SRCSET = re.compile(r'''(\s(?:data-)?srcset\s*=\s*["'])([^"']*)(["'])''')
 CSS_URL = re.compile(r'''url\(\s*(["']?)/(?!/)''')
@@ -183,24 +221,23 @@ def main():
     for rel, lang in HOME:
         transform_home(os.path.join(OUT, rel), lang); print('home  ', rel)
     # every other page: charset + noindex
-    n_html = n_css = 0
+    n_html = n_css = n_lang = 0
     for d, _, files in os.walk(OUT):
         for fn in files:
             p = os.path.join(d, fn)
             rel = os.path.relpath(p, OUT)
             depth = rel.count(os.sep)
             if fn.endswith('.html') and not rel.startswith('hc' + os.sep):
-                s = read(p)
-                if 'name="robots" content="noindex, nofollow"' not in s:
-                    soup = BeautifulSoup(s, 'html.parser')
-                    if soup.head:
-                        add_head(soup, extra_css=False); s = str(soup)
-                write(p, relativize(s, depth)); n_html += 1
+                soup = BeautifulSoup(read(p), 'html.parser')
+                if soup.head:
+                    add_head(soup, extra_css=False)
+                    n_lang += add_lang_switch(soup)
+                write(p, relativize(str(soup), depth)); n_html += 1
             elif fn.endswith('.css') and not rel.startswith('hc' + os.sep):
                 write(p, relativize(read(p), depth, is_css=True)); n_css += 1
     write(os.path.join(OUT, '.nojekyll'), '')
     write(os.path.join(OUT, 'robots.txt'), 'User-agent: *\nDisallow: /\n')
-    print(f'relative paths: {n_html} html, {n_css} css  ->  {OUT}')
+    print(f"relative paths: {n_html} html, {n_css} css, language switch on {n_lang} pages  ->  {OUT}")
 
 
 if __name__ == '__main__':
