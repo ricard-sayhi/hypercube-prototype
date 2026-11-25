@@ -1,7 +1,6 @@
 /* Contact form helpers (Over Hypercube / About Hypercube, Contact tab).
-   - E-mail: one-tap endings (@gmail.com, @hotmail.com, ...). Typing after the @ narrows the list.
-   - Phone: Mobiel / Vast switch for Dutch numbers; the number is grouped as you type (06 1234 5678, 010 123 4567,
-     0570 123 456) and a square fills when it has all 10 digits. +31 / 0031 are turned into 0.
+   - E-mail: a dropdown of common endings under the field (anna@gmail.com, anna@hotmail.com, ...). It opens once you
+     type, narrows as you type after the @, and works with the mouse, touch and keyboard (arrows, Enter, Escape).
    - Versturen: the prototype cannot send (Turnstile only runs on hypercube.nl), so after checking the required
      fields it says so and offers the same message as an e-mail to info@hypercube.nl. */
 (function () {
@@ -10,112 +9,70 @@
   if (!form) return;
   const EN = (document.documentElement.lang || '').toLowerCase().startsWith('en');
   const T = EN ? {
-    endings: 'E-mail endings', type: 'Number type', mobile: 'Mobile', landline: 'Landline',
-    hintMobile: '06 + 8 digits', hintLand: 'Area code + number: 10 digits', left: n => `${n} more digit${n === 1 ? '' : 's'}`, done: 'Complete',
+    endings: 'Suggested e-mail addresses',
     note: 'This is a prototype: messages are not sent from here.', mail: 'Send it as an e-mail instead', subject: 'Message via hypercube.nl',
-    tooLong: 'A Dutch number has 10 digits.',
+    fill: 'Please fill in this field.', badMail: 'Please enter a valid e-mail address.',
   } : {
-    endings: 'E-mailadres aanvullen', type: 'Soort nummer', mobile: 'Mobiel', landline: 'Vast',
-    hintMobile: '06 + 8 cijfers', hintLand: 'Netnummer + nummer: 10 cijfers', left: n => `nog ${n} cijfer${n === 1 ? '' : 's'}`, done: 'Compleet',
+    endings: 'Voorgestelde e-mailadressen',
     note: 'Dit is een prototype: berichten worden hier niet verzonden.', mail: 'Verstuur het als e-mail', subject: 'Bericht via hypercube.nl',
-    tooLong: 'Een Nederlands nummer heeft 10 cijfers.',
+    fill: 'Vul dit veld in.', badMail: 'Vul een geldig e-mailadres in.',
   };
-  const mk = (tag, props, kids) => { const e = document.createElement(tag); Object.assign(e, props || {}); (kids || []).forEach(k => e.append(k)); return e; };
+  const mk = (tag, props) => Object.assign(document.createElement(tag), props || {});
 
-  /* ---------- e-mail endings ---------- */
+  /* ---------- e-mail: dropdown of common endings ---------- */
   const email = document.getElementById('input_1_4');
   if (email) {
-    // a text field with the e-mail keyboard: e-mail fields refuse a scripted caret position (needed to put it before the @);
-    // the address is checked on Versturen
-    email.type = 'text'; email.inputMode = 'email'; email.autocomplete = 'email'; email.spellcheck = false; email.autocapitalize = 'off';
     const DOMAINS = ['gmail.com', 'hotmail.com', 'outlook.com', 'live.nl', 'icloud.com', 'ziggo.nl', 'kpnmail.nl', 'yahoo.com'];
-    const list = mk('div', { className: 'hc-fill', role: 'group' }); list.setAttribute('aria-label', T.endings);
-    const chips = DOMAINS.map(d => {
-      const b = mk('button', { type: 'button', className: 'hc-chip', textContent: '@' + d }); b.dataset.d = d; b.setAttribute('aria-pressed', 'false');
-      b.addEventListener('mousedown', e => e.preventDefault());           // keep the caret in the field
-      b.addEventListener('click', () => {
-        const local = email.value.split('@')[0].trim();
-        email.value = local + '@' + d;
-        email.focus();
-        const at = local ? email.value.length : 0;                         // nothing typed yet: caret before the @
-        email.setSelectionRange(at, at);
-        sync(); email.dispatchEvent(new Event('input', { bubbles: true })); email.dispatchEvent(new Event('change', { bubbles: true }));
+    const box = email.closest('.ginput_container') || email.parentElement;
+    box.classList.add('hc-combo');
+    const list = mk('ul', { className: 'hc-suggest', id: 'hc-email-suggest', hidden: true });
+    list.setAttribute('role', 'listbox'); list.setAttribute('aria-label', T.endings);
+    box.append(list);
+    email.setAttribute('role', 'combobox'); email.setAttribute('aria-autocomplete', 'list');
+    email.setAttribute('aria-controls', list.id); email.setAttribute('aria-expanded', 'false');
+    email.spellcheck = false; email.autocapitalize = 'off';
+
+    let options = [], active = -1;
+    const close = () => { list.hidden = true; email.setAttribute('aria-expanded', 'false'); email.removeAttribute('aria-activedescendant'); active = -1; };
+    const highlight = i => {
+      active = i;
+      options.forEach((o, j) => o.el.setAttribute('aria-selected', String(j === i)));
+      if (i >= 0) { email.setAttribute('aria-activedescendant', options[i].el.id); options[i].el.scrollIntoView({ block: 'nearest' }); }
+      else email.removeAttribute('aria-activedescendant');
+    };
+    const choose = i => {
+      email.value = options[i].value; close();
+      email.dispatchEvent(new Event('input', { bubbles: true })); email.dispatchEvent(new Event('change', { bubbles: true }));
+      close();
+    };
+    function update() {
+      const v = email.value.trim(), at = v.indexOf('@');
+      const local = at < 0 ? v : v.slice(0, at), typed = at < 0 ? '' : v.slice(at + 1).toLowerCase();
+      const matches = !local || /\s/.test(local) ? [] : DOMAINS.filter(d => d.startsWith(typed) && d !== typed);
+      list.replaceChildren(); options = [];
+      if (!matches.length || document.activeElement !== email) { close(); return; }
+      matches.forEach((d, i) => {
+        const el = mk('li', { id: 'hc-email-opt-' + i, className: 'hc-opt' });
+        el.setAttribute('role', 'option'); el.setAttribute('aria-selected', 'false');
+        el.append(mk('span', { className: 'hc-opt-local', textContent: local }), mk('span', { className: 'hc-opt-domain', textContent: '@' + d }));
+        el.addEventListener('mousedown', e => e.preventDefault());          // keep focus (and the keyboard) in the field
+        el.addEventListener('click', () => choose(i));
+        el.addEventListener('mousemove', () => active !== i && highlight(i));
+        list.append(el); options.push({ el, value: local + '@' + d });
       });
-      list.append(b); return b;
+      list.hidden = false; email.setAttribute('aria-expanded', 'true'); highlight(-1);
+    }
+    email.addEventListener('input', update);
+    email.addEventListener('focus', update);
+    email.addEventListener('blur', close);
+    email.addEventListener('keydown', e => {
+      if (list.hidden) { if (e.key === 'ArrowDown') { update(); if (!list.hidden) { highlight(0); e.preventDefault(); } } return; }
+      if (e.key === 'ArrowDown') { highlight((active + 1) % options.length); e.preventDefault(); }
+      else if (e.key === 'ArrowUp') { highlight(active <= 0 ? options.length - 1 : active - 1); e.preventDefault(); }
+      else if (e.key === 'Enter' && active >= 0) { choose(active); e.preventDefault(); }
+      else if (e.key === 'Escape') { close(); e.preventDefault(); }
+      else if (e.key === 'Tab' && active >= 0) choose(active);
     });
-    function sync() {
-      const v = email.value.trim().toLowerCase(), i = v.indexOf('@'), typed = i < 0 ? '' : v.slice(i + 1);
-      let shown = 0;
-      chips.forEach(b => {
-        const d = b.dataset.d, exact = typed === d, show = !typed || d.startsWith(typed);
-        b.hidden = !show; b.setAttribute('aria-pressed', String(exact)); if (show) shown++;
-      });
-      list.hidden = shown === 0;                                            // their own domain: nothing to offer
-    }
-    email.addEventListener('input', sync);
-    email.closest('.ginput_container').after(list);
-    sync();
-  }
-
-  /* ---------- Dutch phone number ---------- */
-  const phone = document.getElementById('input_1_5');
-  if (phone) {
-    phone.type = 'tel'; phone.inputMode = 'tel'; phone.autocomplete = 'tel-national';
-    // 3-digit area codes (incl. 0); every other landline area code has 4 digits
-    const AREA3 = ['010', '013', '015', '020', '023', '024', '026', '030', '033', '035', '036', '038', '040', '043', '045', '046', '050', '053', '055', '058', '070', '071', '072', '073', '074', '075', '076', '077', '078', '079'];
-    let mode = 'mobile';
-    const field = phone.closest('.gfield'), label = field.querySelector('label');
-    const seg = mk('div', { className: 'hc-seg', role: 'group' }); seg.setAttribute('aria-label', T.type);
-    const btns = { mobile: mk('button', { type: 'button', textContent: T.mobile }), landline: mk('button', { type: 'button', textContent: T.landline }) };
-    Object.entries(btns).forEach(([m, b]) => { b.dataset.m = m; b.addEventListener('click', () => setMode(m, true)); seg.append(b); });
-    const row = mk('div', { className: 'hc-label-row' }); label.before(row); row.append(label, seg);
-    const hint = mk('p', { className: 'hc-hint', id: 'hc-phone-hint' }); hint.setAttribute('aria-live', 'polite');
-    phone.closest('.ginput_container').after(hint);
-    phone.setAttribute('aria-describedby', 'hc-phone-hint');
-
-    const digitsOf = v => {
-      let d = v.replace(/[^\d+]/g, '');
-      d = d.replace(/^\+31/, '0').replace(/^0031/, '0').replace(/\+/g, '');
-      if (d && d[0] !== '0') d = '0' + d;                                    // every Dutch number starts with 0
-      return d.slice(0, 10);
-    };
-    const group = d => {
-      if (d.startsWith('06')) return [d.slice(0, 2), d.slice(2, 6), d.slice(6)];
-      const a = AREA3.some(c => d.startsWith(c)) || d.length < 4 && AREA3.some(c => c.startsWith(d)) ? 3 : 4;
-      return a === 3 ? [d.slice(0, 3), d.slice(3, 6), d.slice(6)] : [d.slice(0, 4), d.slice(4, 7), d.slice(7)];
-    };
-    function format() {
-      const before = phone.value, caret = phone.selectionStart ?? before.length;
-      const digitsBeforeCaret = digitsOf(before.slice(0, caret)).length;
-      const d = digitsOf(before);
-      if (d.length >= 2) { const isMobile = d.startsWith('06'); if ((mode === 'mobile') !== isMobile) setMode(isMobile ? 'mobile' : 'landline', false); }
-      const out = group(d).filter(Boolean).join(' ');
-      if (out !== before) {
-        phone.value = out;
-        let pos = 0, seen = 0; while (pos < out.length && seen < digitsBeforeCaret) { if (/\d/.test(out[pos])) seen++; pos++; }
-        if (document.activeElement === phone) phone.setSelectionRange(pos, pos);
-      }
-      const n = d.length;
-      hint.classList.toggle('ok', n === 10);
-      hint.textContent = n === 0 ? (mode === 'mobile' ? T.hintMobile : T.hintLand) : n === 10 ? T.done : T.left(10 - n);
-      phone.setCustomValidity(n && n < 10 ? (mode === 'mobile' ? T.hintMobile : T.hintLand) : '');
-    }
-    function setMode(m, fromUser) {
-      mode = m;
-      Object.entries(btns).forEach(([k, b]) => b.setAttribute('aria-pressed', String(k === m)));
-      phone.placeholder = m === 'mobile' ? '06 1234 5678' : '010 123 4567';
-      if (fromUser) {
-        const d = digitsOf(phone.value);
-        if (m === 'mobile' && !d.startsWith('06')) phone.value = '06 ' ;
-        if (m === 'landline' && (!d || d.startsWith('06'))) phone.value = '0';
-        phone.focus(); const e = phone.value.length; phone.setSelectionRange(e, e);
-        format();
-      }
-    }
-    phone.addEventListener('focus', () => { if (!phone.value && mode === 'mobile') { phone.value = '06 '; requestAnimationFrame(() => phone.setSelectionRange(3, 3)); format(); } });
-    phone.addEventListener('blur', () => { if (/^0?6?$/.test(digitsOf(phone.value))) { phone.value = ''; format(); } });
-    phone.addEventListener('input', format);
-    setMode('mobile', false); format();
   }
 
   /* ---------- Versturen: check, then say it cannot be sent from the prototype ---------- */
@@ -127,17 +84,18 @@
     document.addEventListener('click', e => {
       if (!e.target.closest || e.target.closest('#gform_submit_button_1') !== button) return;
       e.preventDefault(); e.stopPropagation();                                 // Gravity Forms would post to a page that does not exist here
-      const required = [...form.querySelectorAll('input[aria-required="true"], textarea[aria-required="true"], #input_1_4, #input_1_5')];
-      for (const f of required) {
-        if (f.getAttribute('aria-required') === 'true' && !f.value.trim()) f.setCustomValidity(EN ? 'Please fill in this field.' : 'Vul dit veld in.');
-        else if (f.id === 'input_1_4') f.setCustomValidity(/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(f.value.trim()) ? '' : (EN ? 'Please enter a valid e-mail address.' : 'Vul een geldig e-mailadres in.'));
-        else if (f.id !== 'input_1_5') f.setCustomValidity('');
+      const fields = [...form.querySelectorAll('input[aria-required="true"], textarea[aria-required="true"], #input_1_4')];
+      for (const f of fields) {
+        if (f.getAttribute('aria-required') === 'true' && !f.value.trim()) f.setCustomValidity(T.fill);
+        else if (f.id === 'input_1_4') f.setCustomValidity(/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(f.value.trim()) ? '' : T.badMail);
+        else f.setCustomValidity('');
         if (!f.checkValidity()) {
           // bring the field (with its label) into view below the fixed header, then show the browser's message
           const head = (document.getElementById('header-outer') || {}).offsetHeight || 0, box = f.closest('.gfield') || f;
           window.scrollTo({ top: scrollY + box.getBoundingClientRect().top - head - 24, behavior: 'auto' });
           f.focus({ preventScroll: true }); f.reportValidity();
-          f.addEventListener('input', () => f.id !== 'input_1_5' && f.setCustomValidity(''), { once: true }); return;
+          f.addEventListener('input', () => f.setCustomValidity(''), { once: true });
+          return;
         }
       }
       const interests = [...form.querySelectorAll('#field_1_6 input:checked')].map(i => i.value).join(', ');

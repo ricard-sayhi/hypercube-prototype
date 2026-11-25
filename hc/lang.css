@@ -2,7 +2,9 @@
    Replaces the theme's own top-bar switch, which the theme hides below 1000 px.
    IBM Plex Mono uppercase, like the hero menus; the current language is filled, like an active tab. */
 
-#header-outer #menu-top-bar { display: none !important; }
+/* the theme's own switch: #menu-top-bar on Dutch pages, #menu-top-menu-en on English ones (any WPML menu as a fallback) */
+#header-outer #menu-top-bar, #header-outer #menu-top-menu-en { display: none !important; }
+#header-outer nav ul.sf-menu:has(.wpml-ls-item) { display: none !important; }   /* own rule: older browsers drop a list with :has */
 
 #header-outer .hc-lang { display: inline-flex !important; align-items: stretch; align-self: center; margin: 0 26px 0 0; padding: 0; list-style: none;
   border: 1.5px solid #1D1D1B; box-sizing: border-box; line-height: 1; }
