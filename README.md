@@ -6,7 +6,7 @@ A working prototype of hypercube.nl with the new interactive heroes. This is a d
 
 ## What's in it
 
-- **Home (NL/EN):** the three-square navigation is replaced by a rotating 3D hypercube. Hovering a face, a corner or a page pill opens that page's face; clicking goes to the page.
+- **Home (NL/EN):** the three-square navigation is replaced by a rotating 3D hypercube (Three.js). Drag to orbit it (camera-controls, with damping). Hovering a face, a corner or a page pill turns the cube so that page's face looks straight at you from its outer side, with the page name printed flat on that face (troika-three-text, attached to the face); clicking goes to the page.
 - **Sport / Sports, Mobiliteit / Mobility, Over Hypercube / About Hypercube:** each page's title and hotspot image are replaced by a scroll-driven hero. Its order is title → image → text:
   1. The title fills the screen inside the page's square, then shrinks, spreads, joins and settles into the title row.
   2. The image rises in:
@@ -39,5 +39,5 @@ python3 tools/build.py ../hypercube-site dist
 
 ## Notes
 
-- **Animation:** GSAP 3.12.5 (ScrollTrigger, CustomEase) and Three.js r170 load from public CDNs.
+- **Animation:** GSAP 3.12.5 (ScrollTrigger, CustomEase), Three.js r170, camera-controls 2.9 and troika-three-text 0.52 load from public CDNs.
 - **Contact form:** it doesn't send from the prototype: its Cloudflare Turnstile check only works on hypercube.nl, so the check is hidden here and Versturen, after checking the required fields, says so and offers the message as an e-mail to info@hypercube.nl. The e-mail field gets a dropdown of common addresses (anna@gmail.com, anna@hotmail.com, ...) that narrows as you type after the @ (`src/hc/form.css`, `form.js`).
