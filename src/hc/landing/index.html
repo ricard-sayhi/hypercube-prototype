@@ -394,7 +394,7 @@ function applyMaterials() {
 }
 
 /* ---------------- turning a face to the viewer ---------------- */
-const HOME = { yaw: -0.42, pitch: 0.2, dist: 13.5 };
+const HOME = { yaw: -0.42, pitch: 0.2, dist: 15.9 };   // ~15% smaller on screen than 13.5
 const qCube = new THREE.Quaternion(), qGoal = new THREE.Quaternion();
 const restPts = [0, 1, 2, 3].map(() => new THREE.Vector3());
 const restC = new THREE.Vector3(), restN = new THREE.Vector3(), restU = new THREE.Vector3(), restV = new THREE.Vector3();
@@ -555,7 +555,7 @@ function resize() {
   const w = innerWidth || stage.clientWidth || 1, h = innerHeight || stage.clientHeight || 1;
   renderer.setSize(w, h);
   camera.aspect = w / h;
-  HOME.dist = 13.5 * Math.max(1, 0.8 / (camera.aspect || 1));      // keep the cube in frame on portrait screens
+  HOME.dist = 15.9 * Math.max(1, 0.8 / (camera.aspect || 1));      // keep the cube in frame on portrait screens
   controls.maxDistance = Math.max(24, HOME.dist * 1.6);
   camera.updateProjectionMatrix();
   if (active) turnTo(active, false); else if (introDone) controls.dollyTo(HOME.dist, false);
