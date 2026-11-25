@@ -18,6 +18,7 @@ A working prototype of hypercube.nl with the new interactive heroes. This is a d
 - **NL / EN switch:** beside the Menu button on every page and at every width (the theme's own switch only showed above 1000 px). Each language links to the page's own translation; the two pages without one link to that language's home.
 - **Sport discipline icons:** the twelve mixed PNG/JPG icons are replaced by one SVG family: 48 px grid, 3 px stroke with square ends and sharp corners, black with one element in Sport red.
 - **Over Hypercube cube:** the old 8-frame logo GIF beside the text is replaced by the hero's cube drawing as a looping animated SVG (`src/hc/cube-loop.svg`, made by `tools/make_cube_loop.py`). It plays by itself and shows the finished cube when reduced motion is on.
+- **Brand yellow:** the theme's yellow (`#ffff01`: contact panel, yellow rows and dividers, team roles, the full-screen menu) is swapped for the logo's yellow `#FFCC00` at build time.
 - **Everything else:** the original site as mirrored, with the original header, menu and footer.
 
 ## Build

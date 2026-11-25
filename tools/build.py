@@ -158,6 +158,16 @@ def transform_home(path, lang):
     write(path, str(soup))
 
 
+# the theme's yellow (#ffff01: contact panel, yellow rows and dividers, team roles, the full-screen menu) becomes
+# the logo's yellow, the one the new graphics use
+OLD_YELLOW = re.compile(r'#ffff01\b', re.I)
+BRAND_YELLOW = '#FFCC00'
+
+
+def brand_colours(text):
+    return OLD_YELLOW.subn(BRAND_YELLOW, text)
+
+
 LANG_HOME = {'nl': '/', 'en': '/en/'}
 LANG_LABEL = {'nl': ('Nederlands', 'NL'), 'en': ('English', 'EN')}
 
@@ -274,7 +284,7 @@ def main():
     for rel, lang in HOME:
         transform_home(os.path.join(OUT, rel), lang); print('home  ', rel)
     # every other page: charset + noindex
-    n_html = n_css = n_lang = n_icons = n_cube = n_form = 0
+    n_html = n_css = n_lang = n_icons = n_cube = n_form = n_yellow = 0
     for d, _, files in os.walk(OUT):
         for fn in files:
             p = os.path.join(d, fn)
@@ -288,12 +298,14 @@ def main():
                     n_icons += swap_sport_icons(soup)
                     n_cube += swap_cube_gif(soup)
                     n_form += add_form_helpers(soup)
-                write(p, relativize(str(soup), depth)); n_html += 1
+                text, n = brand_colours(str(soup)); n_yellow += n
+                write(p, relativize(text, depth)); n_html += 1
             elif fn.endswith('.css') and not rel.startswith('hc' + os.sep):
-                write(p, relativize(read(p), depth, is_css=True)); n_css += 1
+                text, n = brand_colours(read(p)); n_yellow += n
+                write(p, relativize(text, depth, is_css=True)); n_css += 1
     write(os.path.join(OUT, '.nojekyll'), '')
     write(os.path.join(OUT, 'robots.txt'), 'User-agent: *\nDisallow: /\n')
-    print(f"relative paths: {n_html} html, {n_css} css, language switch on {n_lang} pages, {n_icons} sport icons, {n_cube} cube loops, {n_form} forms  ->  {OUT}")
+    print(f"relative paths: {n_html} html, {n_css} css, language switch on {n_lang} pages, {n_icons} sport icons, {n_cube} cube loops, {n_form} forms, {n_yellow} yellows -> #FFCC00  ->  {OUT}")
 
 
 if __name__ == '__main__':
