@@ -222,6 +222,21 @@ def swap_sport_icons(soup):
     return n
 
 
+def swap_cube_gif(soup):
+    """Over Hypercube / About: the old 8-frame logo GIF becomes the hero's cube drawing as a looping SVG
+    (src/hc/cube-loop.svg, made by tools/make_cube_loop.py)."""
+    n = 0
+    for img in soup.find_all('img'):
+        if (img.get('data-nectar-img-src') or img.get('src') or '').endswith('/Cube-animatie.gif'):
+            for a in ('data-nectar-img-src', 'srcset', 'sizes', 'data-nectar-img-srcset'):
+                img.attrs.pop(a, None)
+            img['src'] = '/hc/cube-loop.svg'
+            img['width'], img['height'] = '204', '204'
+            img['class'] = [c for c in img.get('class', []) if c != 'nectar-lazy'] + ['hc-cube-loop']
+            n += 1
+    return n
+
+
 ROOT_ATTR = re.compile(r'''(\s(?:href|src|action|poster|content|data-[\w-]+)\s*=\s*["'])/(?!/)''')
 SRCSET = re.compile(r'''(\s(?:data-)?srcset\s*=\s*["'])([^"']*)(["'])''')
 CSS_URL = re.compile(r'''url\(\s*(["']?)/(?!/)''')
@@ -247,7 +262,7 @@ def main():
     for rel, lang in HOME:
         transform_home(os.path.join(OUT, rel), lang); print('home  ', rel)
     # every other page: charset + noindex
-    n_html = n_css = n_lang = n_icons = 0
+    n_html = n_css = n_lang = n_icons = n_cube = 0
     for d, _, files in os.walk(OUT):
         for fn in files:
             p = os.path.join(d, fn)
@@ -259,12 +274,13 @@ def main():
                     add_head(soup, extra_css=False)
                     n_lang += add_lang_switch(soup)
                     n_icons += swap_sport_icons(soup)
+                    n_cube += swap_cube_gif(soup)
                 write(p, relativize(str(soup), depth)); n_html += 1
             elif fn.endswith('.css') and not rel.startswith('hc' + os.sep):
                 write(p, relativize(read(p), depth, is_css=True)); n_css += 1
     write(os.path.join(OUT, '.nojekyll'), '')
     write(os.path.join(OUT, 'robots.txt'), 'User-agent: *\nDisallow: /\n')
-    print(f"relative paths: {n_html} html, {n_css} css, language switch on {n_lang} pages, {n_icons} sport icons  ->  {OUT}")
+    print(f"relative paths: {n_html} html, {n_css} css, language switch on {n_lang} pages, {n_icons} sport icons, {n_cube} cube loops  ->  {OUT}")
 
 
 if __name__ == '__main__':
