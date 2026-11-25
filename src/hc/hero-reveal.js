@@ -13,6 +13,18 @@
   const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
   const press = g => { g.classList.add('press'); setTimeout(() => g.classList.remove('press'), 140); };
 
+  /* ---------- re-measuring the scroll pins, only once the page has loaded ----------
+     A refresh briefly lifts the pinned page out of its spacer. If an image inside it is the last thing still loading,
+     the browser fires the window 'load' event right then, in the middle of the move; ScrollTrigger refreshes again
+     inside the first refresh, the spacer is lost and the page collapses to one screen (footer over the hero).
+     So before 'load', a refresh request just waits for it (ScrollTrigger refreshes on 'load' itself as well). */
+  let loadWait = null;
+  function safeRefresh() {
+    if (!window.ScrollTrigger) return;
+    if (document.readyState === 'complete') { ScrollTrigger.refresh(); return; }
+    if (!loadWait) loadWait = new Promise(r => addEventListener('load', r, { once: true })).then(() => requestAnimationFrame(() => ScrollTrigger.refresh()));
+  }
+
   /* ---------- layout helpers: header height, content width, full-width wrapper at the top of the document ---------- */
   function measureFrame() {
     const header = document.querySelector('#header-outer');
@@ -325,7 +337,7 @@
     measureFrame();
     addEventListener('resize', () => measureFrame());
     // the theme adjusts its own spacing after load: align again once it has settled
-    const settle = () => { measureFrame(); if (window.ScrollTrigger && pages.length) ScrollTrigger.refresh(); };
+    const settle = () => { measureFrame(); if (window.ScrollTrigger && pages.length) safeRefresh(); };
     addEventListener('load', settle);
     document.fonts && document.fonts.ready.then(settle);
     [300, 1200].forEach(t => setTimeout(settle, t));
@@ -375,7 +387,7 @@
       }
       measure();
       placeCopy(p);
-      ScrollTrigger.addEventListener('refresh', () => { if (placeCopy(p)) requestAnimationFrame(() => ScrollTrigger.refresh()); });
+      ScrollTrigger.addEventListener('refresh', () => { if (placeCopy(p)) requestAnimationFrame(safeRefresh); });
 
       const box = { x: 0, y: 0, w: 0, sw: 8 };
       const draw = () => { rect.setAttribute('x', box.x + box.sw / 2); rect.setAttribute('y', box.y + box.sw / 2); rect.setAttribute('width', Math.max(0, box.w - box.sw)); rect.setAttribute('height', Math.max(0, box.w - box.sw)); rect.setAttribute('stroke-width', box.sw); };
@@ -427,7 +439,7 @@
         let h = p.copy.offsetHeight, t = 0;
         new ResizeObserver(() => {
           const n = p.copy.offsetHeight; if (Math.abs(n - h) < 2) return; h = n;
-          clearTimeout(t); t = setTimeout(() => ScrollTrigger.refresh(), 60);
+          clearTimeout(t); t = setTimeout(safeRefresh, 60);
         }).observe(p.copy);
       }
       ScrollTrigger.addEventListener('refresh', () => {

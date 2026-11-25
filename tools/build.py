@@ -232,6 +232,7 @@ def swap_cube_gif(soup):
                 img.attrs.pop(a, None)
             img['src'] = '/hc/cube-loop.svg'
             img['width'], img['height'] = '204', '204'
+            img['loading'] = 'lazy'   # like the GIF it replaces (theme lazy-load), it must not hold up the page's load event
             img['class'] = [c for c in img.get('class', []) if c != 'nectar-lazy'] + ['hc-cube-loop']
             n += 1
     return n
