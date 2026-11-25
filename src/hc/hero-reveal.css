@@ -7,6 +7,7 @@
 
 /* until the script has taken over, keep hidden what the sequence reveals (no flash of the finished page) */
 .js-hc .hc-hero, .js-hc .hc-mi, .js-hc .hc-reveal, .js-hc .hc-gtitle { visibility: hidden; }
+.js-hc .hc-copy { opacity: 0; }
 
 /* wrapper aligned to the top-left of the document and stretched to the full window width by the script */
 .hc-shift { position: relative; z-index: 1; }
@@ -53,7 +54,7 @@ h2.hc-title span { display: inline-block; }
 @keyframes hc-cue { 0%, 100% { transform: scaleY(.3); } 50% { transform: scaleY(1); } }
 
 /* the page's own tab content follows directly under the menu (pulled up by the script) */
-.hc-copy { position: relative; z-index: 2; overflow-x: clip; background: #fff; }
+.hc-copy { position: relative; z-index: 2; overflow-x: clip; background: transparent; }
 .hc-copy-in { width: var(--hc-cw, min(1245px, calc(100% - 32px))); margin: 0 auto; }
 .hc-nav-hidden { display: none !important; }
 .hc-grp { position: relative; }

@@ -427,6 +427,11 @@
         if (reached > at + 1e-4) gsap.to(tl, { progress: reached, duration: 1.2, ease: 'power2.out', overwrite: true, onUpdate: check, onComplete: check });
       });
 
+      // the tab content sits just under the menu, i.e. inside the first screen on short or narrow windows:
+      // keep it out of sight (and clicks) while the title and image play, bring it in as the text starts
+      gsap.set(p.copy, { opacity: 0, pointerEvents: 'none' });
+      shown.then(() => gsap.to(p.copy, { opacity: 1, duration: .45, ease: 'power1.out', onComplete: () => gsap.set(p.copy, { clearProps: 'opacity,pointerEvents' }) }));
+
       // text of the first tab: paragraphs in sequence, each in 3-6 word groups (reading order), after the image
       let chain = shown;
       page.querySelectorAll('.hc-reveal').forEach(par => {
