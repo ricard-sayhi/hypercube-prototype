@@ -168,6 +168,25 @@ def brand_colours(text):
     return OLD_YELLOW.subn(BRAND_YELLOW, text)
 
 
+def asset_version():
+    """Short hash of everything in src/hc, added to /hc/*.css|js links so browsers fetch new files after a publish."""
+    import hashlib
+    h = hashlib.sha1()
+    for d, _, files in sorted(os.walk(SRC_HC)):
+        for fn in sorted(files):
+            with open(os.path.join(d, fn), 'rb') as f:
+                h.update(fn.encode())
+                h.update(f.read())
+    return h.hexdigest()[:10]
+
+
+HC_ASSET = re.compile(r'(/hc/[\w./-]+\.(?:css|js))(["\'])')
+
+
+def bust_cache(text, ver):
+    return HC_ASSET.sub(lambda m: m.group(1) + '?v=' + ver + m.group(2), text)
+
+
 LANG_HOME = {'nl': '/', 'en': '/en/'}
 LANG_LABEL = {'nl': ('Nederlands', 'NL'), 'en': ('English', 'EN')}
 
@@ -285,6 +304,7 @@ def main():
         transform_home(os.path.join(OUT, rel), lang); print('home  ', rel)
     # every other page: charset + noindex
     n_html = n_css = n_lang = n_icons = n_cube = n_form = n_yellow = 0
+    ver = asset_version()
     for d, _, files in os.walk(OUT):
         for fn in files:
             p = os.path.join(d, fn)
@@ -299,6 +319,7 @@ def main():
                     n_cube += swap_cube_gif(soup)
                     n_form += add_form_helpers(soup)
                 text, n = brand_colours(str(soup)); n_yellow += n
+                text = bust_cache(text, ver)
                 write(p, relativize(text, depth)); n_html += 1
             elif fn.endswith('.css') and not rel.startswith('hc' + os.sep):
                 text, n = brand_colours(read(p)); n_yellow += n
