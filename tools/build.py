@@ -193,6 +193,7 @@ def add_lang_switch(soup):
     head = soup.head
     if head and not head.find('link', href='/hc/lang.css'):
         head.append(soup.new_tag('link', rel='stylesheet', href='/hc/lang.css'))
+        head.append(soup.new_tag('link', rel='stylesheet', href='/hc/site.css'))   # small site-wide fixes (footer alignment)
     return True
 
 

@@ -1,0 +1,8 @@
+/* Small site-wide fixes on the original theme (every page). */
+
+/* footer block (before the footer): the LinkedIn icon and the privacy link sat centred in their column while
+   the Address and Contact columns beside them are left-aligned; align them all to the left */
+.nectar-global-section.before-footer .wpb_column.centered-text .wpb_wrapper,
+.nectar-global-section.before-footer .wpb_column.centered-text .wpb_text_column,
+.nectar-global-section.before-footer .wpb_column.centered-text .wpb_text_column p { text-align: left !important; }
+.nectar-global-section.before-footer .wpb_column.centered-text .nectar_icon_wrap { margin-left: 0 !important; margin-right: 0 !important; }
