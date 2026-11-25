@@ -238,6 +238,16 @@ def swap_cube_gif(soup):
     return n
 
 
+def add_form_helpers(soup):
+    """Contact form (About pages): layout fixes, e-mail endings, Dutch phone formatting, and a clear message
+    instead of a failed post (src/hc/form.css + form.js)."""
+    if not soup.find(id='gform_1') or soup.find('script', src='/hc/form.js'):
+        return False
+    soup.head.append(soup.new_tag('link', rel='stylesheet', href='/hc/form.css'))
+    soup.body.append(soup.new_tag('script', src='/hc/form.js', defer=None))
+    return True
+
+
 ROOT_ATTR = re.compile(r'''(\s(?:href|src|action|poster|content|data-[\w-]+)\s*=\s*["'])/(?!/)''')
 SRCSET = re.compile(r'''(\s(?:data-)?srcset\s*=\s*["'])([^"']*)(["'])''')
 CSS_URL = re.compile(r'''url\(\s*(["']?)/(?!/)''')
@@ -263,7 +273,7 @@ def main():
     for rel, lang in HOME:
         transform_home(os.path.join(OUT, rel), lang); print('home  ', rel)
     # every other page: charset + noindex
-    n_html = n_css = n_lang = n_icons = n_cube = 0
+    n_html = n_css = n_lang = n_icons = n_cube = n_form = 0
     for d, _, files in os.walk(OUT):
         for fn in files:
             p = os.path.join(d, fn)
@@ -276,12 +286,13 @@ def main():
                     n_lang += add_lang_switch(soup)
                     n_icons += swap_sport_icons(soup)
                     n_cube += swap_cube_gif(soup)
+                    n_form += add_form_helpers(soup)
                 write(p, relativize(str(soup), depth)); n_html += 1
             elif fn.endswith('.css') and not rel.startswith('hc' + os.sep):
                 write(p, relativize(read(p), depth, is_css=True)); n_css += 1
     write(os.path.join(OUT, '.nojekyll'), '')
     write(os.path.join(OUT, 'robots.txt'), 'User-agent: *\nDisallow: /\n')
-    print(f"relative paths: {n_html} html, {n_css} css, language switch on {n_lang} pages, {n_icons} sport icons, {n_cube} cube loops  ->  {OUT}")
+    print(f"relative paths: {n_html} html, {n_css} css, language switch on {n_lang} pages, {n_icons} sport icons, {n_cube} cube loops, {n_form} forms  ->  {OUT}")
 
 
 if __name__ == '__main__':

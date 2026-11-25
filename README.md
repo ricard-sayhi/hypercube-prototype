@@ -31,7 +31,7 @@ python3 tools/build.py ../hypercube-site dist
 ```
 
 - `../hypercube-site` is the local mirror of hypercube.nl. It isn't in this repo.
-- `src/hc/` holds the hero reveal (`hero-reveal.css`, `hero-reveal.js`), the language switch styles (`lang.css`), the sport icons (`icons/`) and the 3D landing (`landing/`).
+- `src/hc/` holds the hero reveal (`hero-reveal.css`, `hero-reveal.js`), the language switch styles (`lang.css`), the sport icons (`icons/`), the contact form helpers (`form.css`, `form.js`) and the 3D landing (`landing/`).
 - `tools/build.py` copies the mirror and rebuilds the six main pages around their tab components. It also swaps the home hero for the 3D landing and makes every URL relative, so the site works from a sub-folder (GitHub Pages).
 
 `dist/` is published on the `gh-pages` branch.
@@ -39,4 +39,4 @@ python3 tools/build.py ../hypercube-site dist
 ## Notes
 
 - **Animation:** GSAP 3.12.5 (ScrollTrigger, CustomEase) and Three.js r170 load from public CDNs.
-- **Contact form:** it doesn't send from the prototype. Its Cloudflare Turnstile check only works on hypercube.nl.
+- **Contact form:** it doesn't send from the prototype: its Cloudflare Turnstile check only works on hypercube.nl, so the check is hidden here and Versturen, after checking the required fields, says so and offers the message as an e-mail to info@hypercube.nl. The form gets one-tap e-mail endings (@gmail.com, @hotmail.com, ...) and a Mobiel / Vast switch that formats Dutch numbers as you type (`src/hc/form.css`, `form.js`).
