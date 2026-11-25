@@ -196,6 +196,32 @@ def add_lang_switch(soup):
     return True
 
 
+SPORT_ICONS = {  # label next to the icon (NL / EN)  ->  src/hc/icons/<name>.svg
+    'voetbal': 'voetbal', 'football': 'voetbal', 'volleybal': 'volleybal', 'volleyball': 'volleybal',
+    'basketbal': 'basketbal', 'basketball': 'basketbal', 'hockey': 'hockey', 'field hockey': 'hockey',
+    'beachvolleybal': 'beachvolleybal', 'beach volleyball': 'beachvolleybal', 'schaatsen': 'schaatsen',
+    'ice skating': 'schaatsen', 'wielrennen': 'wielrennen', 'cycling': 'wielrennen', 'tennis': 'tennis',
+    'ijshockey': 'ijshockey', 'ice hockey': 'ijshockey', 'rugby': 'rugby', 'futsal': 'futsal',
+    'formule 1': 'formule-1', 'formula 1': 'formule-1',
+}
+
+
+def swap_sport_icons(soup):
+    """Sport discipline icons (icon-with-text blocks): the mixed PNG/JPG icons become one SVG family
+    (48 grid, 3 px square-ended stroke, black with one Sport-red accent)."""
+    n = 0
+    for box in soup.select('.iwithtext'):
+        img, label = box.select_one('.iwt-icon img'), box.select_one('.iwt-text')
+        name = label and SPORT_ICONS.get(label.get_text(' ', strip=True).lower())
+        if img and name:
+            img['src'] = f'/hc/icons/{name}.svg'
+            for a in ('srcset', 'sizes', 'width', 'height'):
+                img.attrs.pop(a, None)
+            img['class'] = img.get('class', []) + ['hc-icon']
+            n += 1
+    return n
+
+
 ROOT_ATTR = re.compile(r'''(\s(?:href|src|action|poster|content|data-[\w-]+)\s*=\s*["'])/(?!/)''')
 SRCSET = re.compile(r'''(\s(?:data-)?srcset\s*=\s*["'])([^"']*)(["'])''')
 CSS_URL = re.compile(r'''url\(\s*(["']?)/(?!/)''')
@@ -221,7 +247,7 @@ def main():
     for rel, lang in HOME:
         transform_home(os.path.join(OUT, rel), lang); print('home  ', rel)
     # every other page: charset + noindex
-    n_html = n_css = n_lang = 0
+    n_html = n_css = n_lang = n_icons = 0
     for d, _, files in os.walk(OUT):
         for fn in files:
             p = os.path.join(d, fn)
@@ -232,12 +258,13 @@ def main():
                 if soup.head:
                     add_head(soup, extra_css=False)
                     n_lang += add_lang_switch(soup)
+                    n_icons += swap_sport_icons(soup)
                 write(p, relativize(str(soup), depth)); n_html += 1
             elif fn.endswith('.css') and not rel.startswith('hc' + os.sep):
                 write(p, relativize(read(p), depth, is_css=True)); n_css += 1
     write(os.path.join(OUT, '.nojekyll'), '')
     write(os.path.join(OUT, 'robots.txt'), 'User-agent: *\nDisallow: /\n')
-    print(f"relative paths: {n_html} html, {n_css} css, language switch on {n_lang} pages  ->  {OUT}")
+    print(f"relative paths: {n_html} html, {n_css} css, language switch on {n_lang} pages, {n_icons} sport icons  ->  {OUT}")
 
 
 if __name__ == '__main__':
